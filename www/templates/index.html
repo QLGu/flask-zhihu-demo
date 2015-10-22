@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}首页 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>第一个问题？</h1>
+    <h3>{% if anwser %}{{ anwser }}{% else %}waiting!{% endif %}</h3>
+</div>
+{{ wtf.quick_form(form) }}
+<p>当前时间： {{ moment(current_time).format('LLL') }}.</p>
+<p>登入时间： {{ moment(current_time).fromNow(refresh=True) }}</p>
+{% endblock %}
