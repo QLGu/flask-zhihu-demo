@@ -5,10 +5,11 @@ __author__ = 'hipponensis'
 
 from datetime import datetime
 
-from flask import render_template, session, redirect, url_for
+from flask import render_template, session, redirect, url_for, current_app
 
 from www import db
 from www.models import User
+from www.emailbinding import send_email
 from main import main
 from main.forms import UserForm
 
