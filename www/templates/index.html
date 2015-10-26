@@ -1,9 +1,14 @@
 {% extends "base.html" %}
-{% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}首页 - 知乎Demo{% endblock %}
 
 {% block page_content %}
+<div class="page-header">
+    <h3>Hello, {% if current_user.is_authenticated %}{{ current_user.name }}{% else %}Stranger{% endif %}</h3>
+</div>
+{% endblock %}
+
+<!--
 <div class="page-header">
     <h3>注册邮箱： {% if email %}{{ email }}{% else %}waiting!{% endif %}</h3>
     {% if not known %}
@@ -15,4 +20,4 @@
 {{ wtf.quick_form(form) }}
 <p>当前时间： {{ moment(current_time).format('LLL') }}.</p>
 <p>登入时间： {{ moment(current_time).fromNow(refresh=True) }}</p>
-{% endblock %}
+-->

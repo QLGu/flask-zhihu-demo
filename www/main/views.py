@@ -3,6 +3,15 @@
 
 __author__ = 'hipponensis'
 
+from flask import render_template
+
+from main import main
+
+@main.route('/')
+def index():
+    return render_template('index.html')
+
+'''
 from datetime import datetime
 
 from flask import render_template, session, redirect, url_for, current_app
@@ -28,4 +37,4 @@ def index():
         form.email.data = ''
         return redirect(url_for('main.index'))
     return render_template('index.html', form=form, email=session.get('email'), known=session.get('known', False), current_time=datetime.utcnow())
-
+'''

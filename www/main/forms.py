@@ -6,7 +6,6 @@ __author__ = 'hipponensis'
 from flask.ext.wtf import Form
 
 from wtforms import StringField, TextAreaField, SubmitField
-
 from wtforms.validators import Required
 
 class UserForm(Form):
