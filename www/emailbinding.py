@@ -20,8 +20,8 @@ def send_email(to, subject, template, **kwargs):
     简单的新建一个线程实现异步发送邮件。
     可改进为使用Celery任务列队执行send_ansyc_email()函数。
     '''
-    app = current_app.get_current_object()
-    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + '.' + subject, sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
+    app = current_app._get_current_object()
+    msg = Message(app.config['FLASKY_MAIL_SUBJECT_PREFIX'] + ' ' + subject, sender=app.config['FLASKY_MAIL_SENDER'], recipients=[to])
     msg.body = render_template(template + '.txt', **kwargs)
     msg.html = render_template(template + '.html', **kwargs)
     thr = Thread(target=send_ansyc_email, args=[app, msg])

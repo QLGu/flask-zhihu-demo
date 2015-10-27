@@ -1,0 +1,11 @@
+Dear {{ user.name }},
+
+Welcome to 知乎Demo!
+
+请点击链接激活您的邮箱：
+
+{{ url_for('auth.confirm', token=token, _external=True) }}
+
+Sincerely,
+
+Hipponensis

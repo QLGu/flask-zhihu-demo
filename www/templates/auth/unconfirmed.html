@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}激活邮箱 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h3>激活帐号就可以在知乎Demo发言啦</h3>
+    <p>请前往{{ current_user.email }}查收激活邮件：<a href="{{ url_for('auth.resend_confirmation') }}">点我</a></p>
+</div>
+
+{% endblock %}

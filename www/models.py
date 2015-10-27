@@ -6,7 +6,8 @@ __author__ = 'hipponensis'
 from datetime import datetime
 
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
+from flask import current_app
 from flask.ext.login import UserMixin
 
 from www import db
@@ -22,7 +23,8 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(50), unique=True, nullable=False)
     password_hash = db.Column(db.String(100), nullable=False)
     name = db.Column(db.String(50), nullable=False)
-    image = db.Column(db.String(500), nullable=False)
+    image = db.Column(db.String(500))
+    confirmed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
 
     @property
@@ -36,8 +38,33 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    '''
+    def generate_confirmation_token(self, expiration=3600):
+        ''''''
+        cookie——使用itsdangerous包的方法生成令牌。
+        TimedJSONWebSignatureSerializer类接受一个密钥，以及过期时间，这里默认3600秒。
+        dumps()方法为指定的数据生成加密签名。
+        ''''''
+        s = Serializer(current_app.config['SECRET_KEY'], expiration)
+        return s.dumps({'confirm': self.id})
+
+    def confirm(self, token):
+        ''''''解码令牌，序列化对象提供了loads()方法，唯一参数是令牌字符串。''''''
+        s = Serializer(current_app.config['SECRET_KEY'])
+        try:
+            data = s.loads(token)
+        except:
+            return False
+        if data.get('confirm') != self.id:
+            return False
+        self.confirmed = True
+        db.session.add(self)
+        return True
+    '''
+
     def __repr__(self):
         return '<User %r>' % self.email
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -47,13 +74,4 @@ def load_user(user_id):
     若找到用户，返回用户对象；否则，返回None。
     '''
     return User.query.get(int(user_id))
-
-def create_user():
-    u = User()
-    u.email = 'test@example.com'
-    u.password_hash = 'test1234'
-    u.name = 'Test'
-    db.session.add(u)
-    db.session.flush()
-    db.session.commit()
 
