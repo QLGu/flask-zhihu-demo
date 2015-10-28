@@ -4,7 +4,7 @@
 
 {% block page_content %}
 <div class="page-header">
-    <h3>Hello, {% if current_user.is_authenticated %}{{ current_user.name }}{% else %}Stranger{% endif %}</h3>
+    <h3>Hello, {{ current_user.name }}</h3>
 </div>
 {% endblock %}
 

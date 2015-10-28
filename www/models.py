@@ -24,6 +24,15 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(100), nullable=False)
     name = db.Column(db.String(50), nullable=False)
     image = db.Column(db.String(500))
+    one_desc = db.Column(db.String(50))
+    location = db.Column(db.String(50))
+    industry = db.Column(db.String(50))
+    company = db.Column(db.String(50))
+    job = db.Column(db.String(50))
+    school = db.Column(db.String(50))
+    majar = db.Column(db.String(50))
+    about_me = db.Column(db.Text())
+    is_admin = db.Column(db.Boolean, default=False)
     confirmed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
 
@@ -38,18 +47,17 @@ class User(UserMixin, db.Model):
     def verify_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    '''
     def generate_confirmation_token(self, expiration=3600):
-        ''''''
+        '''
         cookie——使用itsdangerous包的方法生成令牌。
         TimedJSONWebSignatureSerializer类接受一个密钥，以及过期时间，这里默认3600秒。
         dumps()方法为指定的数据生成加密签名。
-        ''''''
+        '''
         s = Serializer(current_app.config['SECRET_KEY'], expiration)
         return s.dumps({'confirm': self.id})
 
     def confirm(self, token):
-        ''''''解码令牌，序列化对象提供了loads()方法，唯一参数是令牌字符串。''''''
+        '''解码令牌，序列化对象提供了loads()方法，唯一参数是令牌字符串。'''
         s = Serializer(current_app.config['SECRET_KEY'])
         try:
             data = s.loads(token)
@@ -59,8 +67,8 @@ class User(UserMixin, db.Model):
             return False
         self.confirmed = True
         db.session.add(self)
+        db.session.commit()
         return True
-    '''
 
     def __repr__(self):
         return '<User %r>' % self.email

@@ -3,13 +3,19 @@
 
 __author__ = 'hipponensis'
 
-from flask import render_template
+from flask import render_template, abort
 
 from main import main
+from www.models import User
 
 @main.route('/')
 def index():
     return render_template('index.html')
+
+@main.route('/people/<peoplename>')
+def user(peoplename):
+    user = User.query.filter_by(name=peoplename).first_or_404()
+    return render_template('people.html', user=user)
 
 '''
 from datetime import datetime

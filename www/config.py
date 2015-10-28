@@ -9,13 +9,14 @@ class Config(object):
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'set a secret key'
     SQLALCHEMY_COMMIT_ON_TEARDOWM = True
     MAIL_SERVER = 'smtp.qq.com'
-    MAIL_PORT = 465
+    MAIL_PORT = 25
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.environ.get('MAIL_USERNAME')  # 环境中定义：$ export MAIL_USERNAME=<完整用户名>
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # 环境中定义：$ export MAIL_PASSWORD=<密码>
+    MAIL_USERNAME = 'hipponensis@foxmail.com'
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # 环境中定义 $ export MAIL_PASSWORD="password" 环境变量设置有问题直接改为'password'。
     FLASKY_MAIL_SUBJECT_PREFIX = '[Hipponensis]'
-    FLASKY_MAIL_SENDER = os.environ.get('FLASKY_MAIL_SENDER')  # 环境中定义：$ export FLASKY_MAIL_SENDER=<邮箱>
-    FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN') # 环境中定义：$ export FLASKY_ADMIN=<邮箱>
+    FLASKY_MAIL_SENDER = 'hipponensis@foxmail.com'
+    FLASKY_ADMIN = 'hipponensis@foxmail.com'
+
     @staticmethod
     def inits_app(app):
         pass
