@@ -4,11 +4,57 @@
 
 {% block page_content %}
 <div class="page-header">
-    <h1>{{ user.name }}</h1>
-
+    {% if user == current_user %}
+    <h3>
+        {{ user.name }},
+        {% if user.one_desc %}{{ user.one_desc }}{% endif %}
+    </h3>
+    <p>
+        {% if user.location %}{{ user.location }}{% else %}填写居住地{% endif %}
+        {% if user.industry %}{{ user.industry }}{% else %}填写行业{% endif %}
+        {% if user.sex==1 %}男{% else %}女{% endif %}
+    </p>
+    <p>
+        {% if not user.company and not user.job %}填写工作信息{% endif %}
+        {% if user.company %}{{ user.company }}，填写职位信息{% endif %}
+        {% if user.job %}填写公司信息，{{ user.job }}{% endif %}
+    </p>
+    <p>
+        {% if not user.school and not user.majar %}填写教育信息{% endif %}
+        {% if user.school %}{{ user.school }}，填写专业信息{% endif %}
+        {% if user.majar %}填写学校信息,{{ user.majar }}{% endif %}
+    </p>
+    <p>{% if user.about_me %}{{ user.about_me }}{% else %}填写个人简介{% endif %}</p>
+    {% else %}
+    <h3>
+        {{ user.name }},
+        {% if user.one_desc %}{{ user.one_desc }}{% endif %}
+    </h3>
+    <p>
+        {% if user.location %}{{ user.location }}{% endif %}
+        {% if user.industry %}{{ user.industry }}{% endif %}
+        {% if user.sex==1 %}男{% else %}女{% endif %}
+    </p>
+    <p>
+        {% if user.company %}{{ user.company }}{% endif %}
+        {% if user.job %}{{ user.job }}{% endif %}
+    </p>
+    <p>
+        {% if user.school %}{{ user.school }}{% endif %}
+        {% if user.majar %}{{ user.majar }}{% endif %}
+    </p>
+    <p>{% if user.about_me %}{{ user.about_me }}{% endif %}</p>
+    {% endif %}
+    <!--
     {% if current_user.is_admin %}
     <p><a href="mailto:{{ user.email }}">{{ user.name }}</a></p>
     {% endif %}
+    -->
+    <p>
+        {% if user == current_user %}
+        <a class="bth bth-danger" href="{{ url_for('main.edit_profile') }}">编辑我的资料</a>
+        {% endif %}
+    </p>
 
 </div>
 {% endblock %}

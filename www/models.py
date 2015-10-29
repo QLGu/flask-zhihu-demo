@@ -27,6 +27,7 @@ class User(UserMixin, db.Model):
     one_desc = db.Column(db.String(50))
     location = db.Column(db.String(50))
     industry = db.Column(db.String(50))
+    sex = db.Column(db.Integer, default=1)
     company = db.Column(db.String(50))
     job = db.Column(db.String(50))
     school = db.Column(db.String(50))

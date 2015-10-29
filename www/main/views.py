@@ -3,9 +3,12 @@
 
 __author__ = 'hipponensis'
 
-from flask import render_template, abort
+from flask import render_template, redirect, url_for, abort, flash
+from flask.ext.login import login_required, current_user
 
 from main import main
+from main.forms import EditProfileForm
+from www import db
 from www.models import User
 
 @main.route('/')
@@ -16,6 +19,36 @@ def index():
 def user(peoplename):
     user = User.query.filter_by(name=peoplename).first_or_404()
     return render_template('people.html', user=user)
+
+@main.route('/people/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+    if form.validate_on_submit():
+        current_user.sex = form.sex.data
+        current_user.one_desc = form.one_desc.data
+        current_user.about_me = form.about_me.data
+        current_user.location = form.location.data
+        current_user.industry = form.industry.data
+        current_user.company = form.company.data
+        current_user.job = form.job.data
+        current_user.school = form.school.data
+        current_user.majar = form.majar.data
+        db.session.add(current_user)
+        db.session.commit()
+        flash('修改成功')
+        return redirect(url_for('main.user', peoplename=current_user.name))
+    form.sex.data = str(current_user.sex)
+    form.one_desc.data = current_user.one_desc
+    form.about_me.data = current_user.about_me
+    form.location.data = current_user.location
+    form.industry.data = current_user.industry
+    form.company.data = current_user.company
+    form.job.data = current_user.job
+    form.school.data = current_user.school
+    form.majar.data = current_user.majar
+    return render_template('edit_profile.html', form=form)
+
 
 '''
 from datetime import datetime
