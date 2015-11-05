@@ -1,10 +1,15 @@
-{% extends "base.html" %}
+{% extends "__base__.html" %}
 
 {% block title %}{{ user.name }} - 知乎Demo{% endblock %}
 
 {% block page_content %}
 <div class="page-header">
     {% if user == current_user %}
+        {% if user.image %}
+            <img src="{{ url_for('static', filename=user.image) }}">
+        {% else %}
+            <img src="/static/img/default_avatar.jpg">
+        {% endif %}
     <h3>
         {{ user.name }},
         {% if user.one_desc %}{{ user.one_desc }}{% endif %}
@@ -26,6 +31,11 @@
     </p>
     <p>{% if user.about_me %}{{ user.about_me }}{% else %}填写个人简介{% endif %}</p>
     {% else %}
+        {% if user.image %}
+            <img src="{{ url_for('static', filename=user.image) }}">
+        {% else %}
+            <img src="/static/img/default_avatar.jpg">
+        {% endif %}
     <h3>
         {{ user.name }},
         {% if user.one_desc %}{{ user.one_desc }}{% endif %}

@@ -4,10 +4,15 @@
 __author__ = 'hipponensis'
 
 from flask.ext.wtf import Form
+from flask.ext.wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, RadioField, TextAreaField, SelectField, SubmitField
 from wtforms.validators import Required, Length
 
 class EditProfileForm(Form):
+    image = FileField('头像', validators=[
+        FileRequired(),
+        FileAllowed(['jpg', 'jpeg', 'png'], '支持jpg、jpeg、png格式，不要超过2M。')
+    ])
     sex = RadioField('性别', choices=[('1', '男'), ('0', '女')], default='1')
     one_desc = StringField('一句话介绍自己', validators=[Length(0, 50)])
     about_me = TextAreaField('个人简介')

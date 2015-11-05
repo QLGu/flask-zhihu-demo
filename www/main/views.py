@@ -3,6 +3,14 @@
 
 __author__ = 'hipponensis'
 
+import os
+import random
+import string
+import shutil
+import time
+import io
+from PIL import Image, ImageOps
+
 from flask import render_template, redirect, url_for, abort, flash
 from flask.ext.login import login_required, current_user
 
@@ -25,6 +33,26 @@ def user(peoplename):
 def edit_profile():
     form = EditProfileForm()
     if form.validate_on_submit():
+        ext = form.image.data.filename.split('.')[-1]
+        filename = "%s_%js.%js" % (current_user.id, int(time.time()), ext)
+        base = os.path.join('www/static/img/', 'uploads')
+
+        stream = form.image.data.stream
+        img = io.BytesIO()
+        shutil.copyfileobj(stream, img)
+        img.seek(0)
+
+        with open(os.path.join(base, filename), "wb") as f:
+            f.write(img.read())
+        img.seek(0)
+
+        im = Image.open(img)
+        size = 100,100
+        image = ImageOps.fit(im, size, Image.ANTIALIAS)
+        filename = str(int(time.time())) + str(current_user.id) + '.jpg'
+
+        image.save(os.path.join(base, filename))
+        current_user.image = "img/uploads/%js" % filename
         current_user.sex = form.sex.data
         current_user.one_desc = form.one_desc.data
         current_user.about_me = form.about_me.data
@@ -48,6 +76,8 @@ def edit_profile():
     form.school.data = current_user.school
     form.majar.data = current_user.majar
     return render_template('edit_profile.html', form=form)
+
+
 
 
 '''

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "__base__.html" %}
 {% import "bootstrap/wtf.html" as wtf %}
 
 {% block title %}编辑个人资料 - 知乎Demo{% endblock %}
@@ -7,6 +7,11 @@
 <div class="page-header">
     <h1>编辑个人资料</h1>
 </div>
+{% if current_user.image %}
+    <img src="{{ url_for('static', filename=current_user.image) }}">
+{% else %}
+    <img src="/static/img/default_avatar.jpg">
+{% endif %}
 <div class="col-md-4">
     {{ wtf.quick_form(form) }}
 </div>
