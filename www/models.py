@@ -80,14 +80,14 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     confirmed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
-    user_followed = db.relationship('Follow',
+    followed = db.relationship('Follow',
                                     foreign_keys=[Follow.follower_id],
-                                    backref=db.backref('user_follower', lazy='joined'),
+                                    backref=db.backref('follower', lazy='joined'),
                                     lazy='dynamic',
                                     cascade='all, delete-orphan')
-    user_followers = db.relationship('Follow',
+    followers = db.relationship('Follow',
                                      foreign_keys=[Follow.followed_id],
-                                     backref=db.backref('user_followed', lazy='joined'),
+                                     backref=db.backref('followed', lazy='joined'),
                                      lazy='dynamic',
                                      cascade='all, delete-orphan')
     user_questions = db.relationship('Question', primaryjoin='User.id==Question.author_id', backref='question_user', lazy='dynamic')
@@ -133,11 +133,13 @@ class User(UserMixin, db.Model):
         if not self.is_following(user):
             f = Follow(follower=self, followed=user)
             db.session.add(f)
+            db.session.commit()
 
     def unfollow(self, user):
         f = self.followed.filter_by(followed_id=user.id).first()
         if f:
             db.session.delete(f)
+            db.session.commit()
 
     def is_following(self, user):
         return self.followed.filter_by(followed_id=user.id).first() is not None
@@ -170,24 +172,21 @@ class Question(db.Model):
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     modified_at = db.Column(db.DateTime, default=datetime.now)
-    author_id = db.Column(db.String(50), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_comments = db.relationship('Comment', primaryjoin='Question.id==Comment.question_id', backref='comment_question', lazy='dynamic')
     question_answers = db.relationship('Answer', primaryjoin='Question.id==Answer.question_id', backref='answer_question', lazy='dynamic')
     question_follower = db.relationship('User',
                                         secondary=questions_users,
-                                        primaryjoin=(questions_users.c.questions_id==id),
-                                        secondaryjoin=(questions_users.c.users_id==id),
                                         backref=db.backref('following_question', lazy='dynamic'),
                                         lazy='dynamic')
     question_tag = db.relationship('Tag',
                                    secondary=questions_tags,
-                                   primaryjoin=(questions_tags.c.questions_id==id),
-                                   secondaryjoin=(questions_tags.c.tags_id==id),
                                    backref=db.backref('tag_question', lazy='dynamic'),
                                    lazy='dynamic')
 
-    def __init__(self, title):
+    def __init__(self, title, content):
         self.title = title
+        self.content = content
 
     def __repr__(self):
         return "<Question %r>" % self.title
@@ -208,14 +207,10 @@ class Answer(db.Model):
     answer_comments = db.relationship('Comment', primaryjoin='Answer.id==Comment.answer_id', backref='comment_answer', lazy='dynamic')
     vote_user = db.relationship('User',
                                 secondary=answers_users,
-                                primaryjoin=(answers_users.c.answers_id==id),
-                                secondaryjoin=(answers_users.c.users_id==id),
                                 backref=db.backref('user_vote', lazy='dynamic'),
                                 lazy='dynamic')
     answer_collection = db.relationship('Collection',
                                         secondary=answers_collections,
-                                        primaryjoin=(answers_collections.c.answers_id==id),
-                                        secondaryjoin=(answers_collections.c.collections_id==id),
                                         backref=db.backref('collection_answer', lazy='dynamic'),
                                         lazy='dynamic')
 
@@ -234,8 +229,6 @@ class Tag(db.Model):
     desc = db.Column(db.Text, nullable=False)
     tag_follower = db.relationship('User',
                                    secondary=tags_users,
-                                   primaryjoin=(tags_users.c.tags_id==id),
-                                   secondaryjoin=(tags_users.c.users_id==id),
                                    backref=db.backref('following_tag', lazy='dynamic'),
                                    lazy='dynamic')
 
@@ -258,8 +251,6 @@ class Collection(db.Model):
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     collection_follower = db.relationship('User',
                                           secondary=collections_users,
-                                          primaryjoin=(collections_users.c.collections_id==id),
-                                          secondaryjoin=(collections_users.c.users_id==id),
                                           backref=db.backref('following_collection', lazy='dynamic'),
                                           lazy='dynamic')
 

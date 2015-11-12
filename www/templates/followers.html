@@ -1,0 +1,29 @@
+{% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
+
+{% block title %}{{ user.name }} {{ title }} - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>{{ user.name }} {{ title }}</h1>
+</div>
+<table class="table table-hover followers">
+    <thead><tr><th>User</th><th>Since</th></tr></thead>
+    {% for follow in follows %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.user', id = follow.user.id) }}">
+                <img class="img-rounded" src="{{ url_for('static', filename=follow.user.image) }}">
+                {{ follow.user.name }}
+            </a>
+        </td>
+        <td>
+            {{ moment(follow.timestamp).format('L') }}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, endpoint, id = user.id) }}
+</div>
+{% endblock %}

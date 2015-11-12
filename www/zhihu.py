@@ -7,7 +7,7 @@ import os
 
 from www import create_app, db
 
-from www.models import User
+from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 
 app = create_app(os.getenv('FLASK_CONFIG') or 'default')
 

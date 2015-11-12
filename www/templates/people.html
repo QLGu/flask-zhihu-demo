@@ -4,15 +4,11 @@
 
 {% block page_content %}
 <div class="page-header">
+    {% if user.image %}
+        <img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=user.image) }}">
+    {% endif %}
+    <div class="profile-header">
     {% if user == current_user %}
-        {% if user.image %}
-            <img src="{{ url_for('static', filename=user.image) }}">
-        {% endif %}
-    <p>
-        {% if user == current_user %}
-        <a class="bth bth-danger" href="{{ url_for('main.edit_avatar') }}">上传头像</a>
-        {% endif %}
-    </p>
     <h3>
         {{ user.name }},
         {% if user.one_desc %}{{ user.one_desc }}{% endif %}
@@ -34,9 +30,6 @@
     </p>
     <p>{% if user.about_me %}{{ user.about_me }}{% else %}填写个人简介{% endif %}</p>
     {% else %}
-        {% if user.image %}
-            <img src="{{ url_for('static', filename=user.image) }}">
-        {% endif %}
     <h3>
         {{ user.name }},
         {% if user.one_desc %}{{ user.one_desc }}{% endif %}
@@ -61,11 +54,27 @@
     <p><a href="mailto:{{ user.email }}">{{ user.name }}</a></p>
     {% endif %}
     -->
+
+    <p>
+        {% if user != current_user %}
+            {% if not current_user.is_following(user) %}
+            <a href="{{ url_for('main.follow',id=user.id) }}" class="btn btn-primary">关注</a>
+            {% else %}
+            <a href="{{ url_for('main.unfollow', id=user.id) }}" class="btn btn-default">取消关注</a>
+            {% endif %}
+        {% endif %}
+        <a href="{{ url_for('main.followed_by', id=user.id) }}">关注了: <span class="badge">{{ user.followed.count() }}</span></a>
+        <a href="{{ url_for('main.followers', id=user.id) }}">关注者: <span class="badge">{{ user.followers.count() }}</span></a>
+        {% if user != current_user and user.is_following(current_user) %}
+        | <span class="label label-default">对方关注了你</span>
+        {% endif %}
+    </p>
     <p>
         {% if user == current_user %}
         <a class="bth bth-danger" href="{{ url_for('main.edit_profile') }}">编辑我的资料</a>
+        <a class="bth bth-danger" href="{{ url_for('main.edit_avatar') }}">上传头像</a>
         {% endif %}
     </p>
-
+    </div>
 </div>
 {% endblock %}

@@ -8,6 +8,7 @@ import random
 import string
 import shutil
 import time
+import datetime
 import io
 from PIL import Image, ImageOps
 
@@ -20,9 +21,11 @@ from www import db
 from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
 
+
 @main.route('/')
 def index():
     return render_template('index.html')
+
 
 @main.before_app_request
 def before_request():
@@ -36,6 +39,7 @@ def before_request():
             and request.endpoint[:5] != 'main.'\
             and request.endpoint != 'static':
         return redirect(url_for('main.unconfirmed'))
+
 
 @main.route('/unconfirmed')
 def unconfirmed():
@@ -62,6 +66,7 @@ def signin():
         flash('邮箱或密码错误')
     return render_template('signin.html', form=form)
 
+
 @main.route('/signout')
 @login_required
 def signout():
@@ -72,11 +77,13 @@ def signout():
     logout_user()
     return redirect(url_for('main.index'))
 
+
 @main.route('/secret')
 @login_required
 def secret():
     '''login_required修饰器保护路由只让认证用户访问。'''
     return '只有认证用户可以访问。'
+
 
 @main.route('/register', methods=['GET', 'POST'])
 def register():
@@ -98,6 +105,7 @@ def register():
             return redirect(url_for('main.signin'))
     return render_template('register.html', form=form)
 
+
 @main.route('/confirm/<token>')
 @login_required
 def confirm(token):
@@ -114,6 +122,7 @@ def confirm(token):
         flash('认证链接已过期！')
     return redirect(url_for('main.index'))
 
+
 @main.route('/confirm')
 @login_required
 def resend_confirmation():
@@ -123,10 +132,12 @@ def resend_confirmation():
     flash('激活邮件已重送发送。')
     return redirect(url_for('main.index'))
 
-@main.route('/people/<peoplename>')
-def user(peoplename):
-    user = User.query.filter_by(name=peoplename).first_or_404()
+
+@main.route('/people/<id>')
+def user(id):
+    user = User.query.filter_by(id=id).first_or_404()
     return render_template('people.html', user=user)
+
 
 @main.route('/people/edit', methods=['GET', 'POST'])
 @login_required
@@ -145,7 +156,7 @@ def edit_profile():
         db.session.add(current_user)
         db.session.commit()
         flash('修改成功')
-        return redirect(url_for('main.user', peoplename=current_user.name))
+        return redirect(url_for('main.user', id=current_user.id))
     form.sex.data = str(current_user.sex)
     form.one_desc.data = current_user.one_desc
     form.about_me.data = current_user.about_me
@@ -156,6 +167,7 @@ def edit_profile():
     form.school.data = current_user.school
     form.majar.data = current_user.majar
     return render_template('edit_profile.html', form=form)
+
 
 @main.route('/people/avatar', methods=['GET', 'POST'])
 @login_required
@@ -185,13 +197,81 @@ def edit_avatar():
         db.session.add(current_user)
         db.session.commit()
         flash('头像上传成功')
-        return redirect(url_for('main.user', peoplename=current_user.name))
+        return redirect(url_for('main.user', id=current_user.id))
     return render_template('edit_avatar.html', form=form)
+
+
+@main.route('/people/<id>/follow')
+@login_required
+def follow(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    if current_user.is_following(user):
+        flash('你已经关注了该用户。')
+        return redirect(url_for('main.user', id=id))
+    current_user.follow(user)
+    flash('你关注了 %s。' % user.name)
+    return redirect(url_for('main.user', id=id))
+
+
+@main.route('/people/<id>/unfollow')
+@login_required
+def unfollow(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    if not current_user.is_following(user):
+        flash('你还没有关注该用户。')
+        return redirect(url_for('main.user', id=id))
+    current_user.unfollow(user)
+    flash('你取消了对 %s 的关注。' % user.name)
+    return redirect(url_for('main.user', id=id))
+
+
+@main.route('/people/<id>/following')
+def followers(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.followers.paginate(page, per_page=100, error_out=False)
+    follows = [{'user': item.follower, 'timestamp': item.timestamp}
+               for item in pagination.items]
+    return render_template('followers.html', user=user, title="的关注者",
+                           endpoint='main.followers', pagination=pagination,
+                           follows=follows)
+
+
+@main.route('/people/<id>/followed')
+def followed_by(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.followed.paginate(page, per_page=100, error_out=False)
+    follows = [{'user': item.followed, 'timestamp': item.timestamp}
+               for item in pagination.items]
+    return render_template('followers.html', user=user, title="关注的人",
+                           endpoint='main.followed_by', pagination=pagination,
+                           follows=follows)
+
+
+
 '''
 @main.route('/question/<id>')
 def question(id):
     question = Question.query.filter_by(id=id).first_or_404()
-    return render_template('question.html', question=question)
+    if (datetime.datetime.now()-question.created_at).days == 0:
+        created_time = datetime.datetime.strftime(question.created_at, '%H:%M')
+    else:
+        created_time = datetime.datetime.strftime(question.created_at, '%Y-%m-%d')
+    return render_template('question.html', question=question, created_time=created_time)
+
 
 @main.route('/question/add', methods=['GET', 'POST'])
 @login_required
@@ -199,11 +279,15 @@ def add_question():
     form = AddQuestionForm()
     if form.validate_on_submit():
         question = Question(title=form.title.data,
-                            conten = form.title.data,
+                            content=form.content.data,
 
-                            author=current_user._get_current_object())
+                            question_user=current_user._get_current_object())
+        db.session.add(question)
+        db.session.commit()
+        return redirect(url_for('main.question', id=question.id))
+    return render_template('add_question.html', form=form)
+
 '''
-
 
 '''
 from datetime import datetime
