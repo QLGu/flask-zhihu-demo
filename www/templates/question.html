@@ -1,0 +1,12 @@
+{% extends "__base__.html" %}
+
+{% block title %}{{ question.title }} - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h3>{{ question.title }}</h3>
+    <p>{{ question.content }}</p>
+    <p>{{ question.author }}</p>
+
+</div>
+{% endblock %}

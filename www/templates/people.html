@@ -7,9 +7,12 @@
     {% if user == current_user %}
         {% if user.image %}
             <img src="{{ url_for('static', filename=user.image) }}">
-        {% else %}
-            <img src="/static/img/default_avatar.jpg">
         {% endif %}
+    <p>
+        {% if user == current_user %}
+        <a class="bth bth-danger" href="{{ url_for('main.edit_avatar') }}">上传头像</a>
+        {% endif %}
+    </p>
     <h3>
         {{ user.name }},
         {% if user.one_desc %}{{ user.one_desc }}{% endif %}
@@ -33,8 +36,6 @@
     {% else %}
         {% if user.image %}
             <img src="{{ url_for('static', filename=user.image) }}">
-        {% else %}
-            <img src="/static/img/default_avatar.jpg">
         {% endif %}
     <h3>
         {{ user.name }},

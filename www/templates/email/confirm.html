@@ -1,0 +1,6 @@
+<p>Dear {{ user.name }},</p>
+<p>Welcome to <b>知乎Demo</b>!</p>
+<p>请点击链接激活您的邮箱：<a href="{{ url_for('main.confirm', token=token, _external=True) }}">链接</a></p>
+<p>Sincerely,</p>
+<p>Hipponensis</p>
+

@@ -12,7 +12,7 @@ class Config(object):
     MAIL_PORT = 25
     MAIL_USE_TLS = True
     MAIL_USERNAME = 'hipponensis@foxmail.com'
-    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # 环境中定义 $ export MAIL_PASSWORD="password" 环境变量设置有问题直接改为'password'。
+    MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')  # 环境中定义 $ export MAIL_PASSWORD="password" 环境变量设置出现无效问题，所以要使用时直接改为'mypassword'。
     FLASKY_MAIL_SUBJECT_PREFIX = '[Hipponensis]'
     FLASKY_MAIL_SENDER = 'hipponensis@foxmail.com'
     FLASKY_ADMIN = 'hipponensis@foxmail.com'
