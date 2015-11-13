@@ -63,12 +63,22 @@
             <a href="{{ url_for('main.unfollow', id=user.id) }}" class="btn btn-default">取消关注</a>
             {% endif %}
         {% endif %}
-        <a href="{{ url_for('main.followed_by', id=user.id) }}">关注了: <span class="badge">{{ user.followed.count() }}</span></a>
-        <a href="{{ url_for('main.followers', id=user.id) }}">关注者: <span class="badge">{{ user.followers.count() }}</span></a>
+        <a href="{{ url_for('main.followed_by', id=user.id) }}">关注了: <span class="badge">{{ user.followed.count() }}</span>人</a>
+        <a href="{{ url_for('main.followers', id=user.id) }}">关注者: <span class="badge">{{ user.followers.count() }}</span>人</a>
         {% if user != current_user and user.is_following(current_user) %}
         | <span class="label label-default">对方关注了你</span>
         {% endif %}
     </p>
+        <p>
+            关注了<a href="{{ url_for('main.following_tag', id=user.id) }}"><span class="badge">{{ user.tags.count() }}</span>个话题</a>
+        </p>
+        <p>
+        {% for tag in user.tags %}
+            <a href="{{ url_for('main.topic', id=tag.tag_set.id) }}">
+                <img class="img-rounded" src="{{ url_for('static', filename=tag.tag_set.image) }}">
+            </a>
+        {% endfor %}
+        </p>
     <p>
         {% if user == current_user %}
         <a class="bth bth-danger" href="{{ url_for('main.edit_profile') }}">编辑我的资料</a>

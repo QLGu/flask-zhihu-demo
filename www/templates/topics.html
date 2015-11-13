@@ -1,0 +1,26 @@
+{% extends "__base__.html" %}
+
+{% block title %}话题广场 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>话题广场</h1>
+    <p>已关注 {{ current_user.tags.count() }} 个话题</p>
+<table class="table table-hover followers">
+    <thead><tr><th>List</th></tr></thead>
+    {% for topic in topics %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.topic', id=topic.id) }}">
+                <img class="img-rounded" src="{{ url_for('static', filename=topic.image) }}">
+                {{ topic.title }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+<div>
+    <p><a href="{{ url_for('main.topics_add') }}">添加话题</a></p>
+</div>
+{% endblock %}

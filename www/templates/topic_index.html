@@ -1,0 +1,23 @@
+{% extends "__base__.html" %}
+
+{% block title %}话题动态 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h3>已关注的话题动态</h3>
+<table class="table table-hover followers">
+    <thead><tr><th>List</th></tr></thead>
+    {% for tag in tags %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.topic', id=tag.id) }}">
+                <img class="img-rounded" src="{{ url_for('static', filename=tag.image) }}">
+                {{ tag.title }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+    <h3><a href="{{ url_for('main.topics') }}">前往话题广场</a></h3>
+</div>
+{% endblock %}

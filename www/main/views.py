@@ -16,23 +16,29 @@ from flask import render_template, request, redirect, url_for, abort, flash
 from flask.ext.login import login_user, logout_user, login_required, current_user
 
 from main import main
-from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddQuestionForm
+from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddTagForm, AddQuestionForm
 from www import db
 from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
 
+
+
+###################################  主页视图  ###################################
 
 @main.route('/')
 def index():
     return render_template('index.html')
 
 
+###################################  注册登陆视图  ###################################
+
+############  钩子函数  ############
 @main.before_app_request
 def before_request():
     '''
     钩子，在处理请求之前执行代码。
     main.before_app_request修饰器保证在蓝本中使用针对程序全局请求的钩子。
-    当用户已登陆、注册邮箱还未认证或请求的端点（使用request.endpoint获取）不在认证蓝本中时，拦截请求，重定向到unconfirmed。
+    当用户已登陆、注册邮箱还未激活或请求的端点（使用request.endpoint获取）不在激活蓝本中时，拦截请求，重定向到unconfirmed。
     '''
     if current_user.is_authenticated \
             and not current_user.confirmed \
@@ -40,15 +46,15 @@ def before_request():
             and request.endpoint != 'static':
         return redirect(url_for('main.unconfirmed'))
 
-
+###########  未激活页面  ###########
 @main.route('/unconfirmed')
 def unconfirmed():
-    '''为未认证用户提供信息的页面，未登陆和已认证用户进入时自动回到首页'''
+    '''为未激活用户提供信息的页面，未登陆和已激活用户进入时自动回到首页'''
     if current_user.is_anonymous or current_user.confirmed:
         return redirect(url_for('main.index'))
     return render_template('unconfirmed.html')
 
-
+############  用户登陆  ############
 @main.route('/signin', methods=['GET', 'POST'])
 def signin():
     '''
@@ -66,29 +72,29 @@ def signin():
         flash('邮箱或密码错误')
     return render_template('signin.html', form=form)
 
-
+############  用户登出  ############
 @main.route('/signout')
 @login_required
 def signout():
     '''
     视图函数signout，实现登出，重定向回到首页。
-    login_required修饰器保护路由只让认证用户操作。
+    login_required修饰器保护路由只让激活用户操作。
     '''
     logout_user()
     return redirect(url_for('main.index'))
 
-
+############  未激活限制  ############
 @main.route('/secret')
 @login_required
 def secret():
-    '''login_required修饰器保护路由只让认证用户访问。'''
-    return '只有认证用户可以访问。'
+    '''login_required修饰器保护路由只让激活用户访问。'''
+    return '只有激活用户可以访问。'
 
-
+############  注册账户  ############
 @main.route('/register', methods=['GET', 'POST'])
 def register():
     '''
-    注册，并发送认证邮件。
+    注册，并发送激活邮件。
     即使通过配置程序已经可以在末尾自动提交数据库变化，这里也要添加db.session.commit()，因为后续确定令牌要用到id。
     '''
     form = RegistrationForm()
@@ -100,29 +106,29 @@ def register():
             db.session.add(user)
             db.session.commit()
             token = user.generate_confirmation_token()
-            send_email(user.email, '认证邮箱', 'email/confirm', user=user, token=token)
-            flash('一封认证邮件已发往您的注册邮箱，请尽快前往确认。')
+            send_email(user.email, '激活邮箱', 'email/confirm', user=user, token=token)
+            flash('一封激活邮件已发往您的注册邮箱，请尽快前往确认。')
             return redirect(url_for('main.signin'))
     return render_template('register.html', form=form)
 
-
+############  激活账户  ############
 @main.route('/confirm/<token>')
 @login_required
 def confirm(token):
     '''
-    认证邮箱模板文件中的{{ url_for('main.confirm', token=token, _external=True) }}生成绝对URL。
+    激活邮箱模板文件中的{{ url_for('main.confirm', token=token, _external=True) }}生成绝对URL。
     此视图函数中login_required修饰器会保护这个路由，用户点击确认邮件的链接后，要先登陆，然后才能执行做个试图函数。
-    若用户已经认证，则回到首页。
+    若用户已经激活，则回到首页。
     '''
     if current_user.confirmed:
         return redirect(url_for('main.index'))
     if current_user.confirm(token):
-        flash('您的邮箱已通过认证！')
+        flash('您的邮箱已通过激活！')
     else:
-        flash('认证链接已过期！')
+        flash('激活链接已过期！')
     return redirect(url_for('main.index'))
 
-
+##########  重发激活邮件  ##########
 @main.route('/confirm')
 @login_required
 def resend_confirmation():
@@ -133,12 +139,15 @@ def resend_confirmation():
     return redirect(url_for('main.index'))
 
 
+###################################  个人主页视图  ###################################
+
+############  个人主页  ############
 @main.route('/people/<id>')
 def user(id):
     user = User.query.filter_by(id=id).first_or_404()
     return render_template('people.html', user=user)
 
-
+############  编辑资料  ############
 @main.route('/people/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -168,7 +177,7 @@ def edit_profile():
     form.majar.data = current_user.majar
     return render_template('edit_profile.html', form=form)
 
-
+############  上传头像  ############
 @main.route('/people/avatar', methods=['GET', 'POST'])
 @login_required
 def edit_avatar():
@@ -200,7 +209,7 @@ def edit_avatar():
         return redirect(url_for('main.user', id=current_user.id))
     return render_template('edit_avatar.html', form=form)
 
-
+############  关注他人  ############
 @main.route('/people/<id>/follow')
 @login_required
 def follow(id):
@@ -215,7 +224,7 @@ def follow(id):
     flash('你关注了 %s。' % user.name)
     return redirect(url_for('main.user', id=id))
 
-
+############  取消关注  ############
 @main.route('/people/<id>/unfollow')
 @login_required
 def unfollow(id):
@@ -230,8 +239,23 @@ def unfollow(id):
     flash('你取消了对 %s 的关注。' % user.name)
     return redirect(url_for('main.user', id=id))
 
-
+###########  我关注的人  ###########
 @main.route('/people/<id>/following')
+def followed_by(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.followed.paginate(page, per_page=100, error_out=False)
+    follows = [{'user': item.followed, 'timestamp': item.timestamp}
+               for item in pagination.items]
+    return render_template('followers.html', user=user, title="关注的人",
+                           endpoint='main.followed_by', pagination=pagination,
+                           follows=follows)
+
+###########  关注我的人  ###########
+@main.route('/people/<id>/followers')
 def followers(id):
     user = User.query.filter_by(id=id).first()
     if user is None:
@@ -246,20 +270,109 @@ def followers(id):
                            follows=follows)
 
 
-@main.route('/people/<id>/followed')
-def followed_by(id):
+###################################  话题视图  ###################################
+
+############  话题主页  ############
+@main.route('/topic')
+@login_required
+def topic_index():
+    topics = Tag.query.all()
+    tags = []
+    for topic in topics:
+        if current_user.is_following_tag(topic):
+            tags.append(topic)
+    return render_template('topic_index.html', tags=tags)
+
+############  话题广场  ############
+@main.route('/topics')
+@login_required
+def topics():
+    topics = Tag.query.order_by(Tag.created_at.asc()).all()
+    return render_template('topics.html', topics=topics)
+
+############  添加话题  ############
+@main.route('/topics/add', methods=['GET', 'POST'])
+@login_required
+def topics_add():
+    form = AddTagForm()
+    if form.validate_on_submit():
+        tag = Tag(title=form.title.data, desc=form.desc.data)
+        if Tag.query.filter_by(title=form.title.data).first():
+            flash('该话题已创建。')
+        else:
+            db.session.add(tag)
+            db.session.commit()
+            flash('成功添加话题。')
+            return redirect(url_for('main.topics'))
+    return render_template('topics_add.html', form=form)
+
+############  话题分页  ############
+@main.route('/topic/<id>')
+@login_required
+def topic(id):
+    topic = Tag.query.filter_by(id=id).first_or_404()
+    if topic is None:
+        flash('Invalid topic.')
+        return redirect(url_for('main.index'))
+    return render_template('topic.html', topic=topic)
+
+############  关注话题  ############
+@main.route('/topic/<id>/follow')
+@login_required
+def follow_tag(id):
+    topic = Tag.query.filter_by(id=id).first()
+    if topic is None:
+        flash('Invalid topic.')
+        return redirect(url_for('main.index'))
+    if current_user.is_following_tag(topic):
+        flash('你已经关注了该话题。')
+        return redirect(url_for('main.topic', id=id))
+    current_user.follow_tag(topic)
+    flash('你关注了话题： %s。' % topic.title)
+    return redirect(url_for('main.topic', id=id))
+
+############  取消关注  ############
+@main.route('/topic/<id>/unfollow')
+@login_required
+def unfollow_tag(id):
+    topic = Tag.query.filter_by(id=id).first()
+    if topic is None:
+        flash('Invalid topic.')
+        return redirect(url_for('main.index'))
+    if not current_user.is_following_tag(topic):
+        flash('你还没有关注该话题。')
+        return redirect(url_for('main.topic', id=id))
+    current_user.unfollow_tag(topic)
+    flash('你取消了对话题： %s 的关注。' % topic.title)
+    return redirect(url_for('main.topic', id=id))
+
+###########  关注的话题  ###########
+@main.route('/people/<id>/topics')
+def following_tag(id):
     user = User.query.filter_by(id=id).first()
     if user is None:
         flash('Invalid user.')
         return redirect(url_for('main.index'))
     page = request.args.get('page', 1, type=int)
-    pagination = user.followed.paginate(page, per_page=100, error_out=False)
-    follows = [{'user': item.followed, 'timestamp': item.timestamp}
-               for item in pagination.items]
-    return render_template('followers.html', user=user, title="关注的人",
-                           endpoint='main.followed_by', pagination=pagination,
-                           follows=follows)
+    pagination = user.tags.paginate(page, per_page=100, error_out=False)
+    following_tags = [{'tag': item.tag_set} for item in pagination.items]
+    return render_template('following_topics.html', user=user, title="关注的话题",
+                           endpoint='main.following_tag', pagination=pagination,
+                           following_tags=following_tags)
 
+###########  话题关注者  ###########
+@main.route('/topic/<id>/followers')
+def tag_followers(id):
+    topic = Tag.query.filter_by(id=id).first()
+    if topic is None:
+        flash('Invalid topic.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = topic.users.paginate(page, per_page=100, error_out=False)
+    tag_followers = [{'user': item.user_set} for item in pagination.items]
+    return render_template('topic_followers.html', topic=topic, title="人关注了该话题",
+                           endpoint='main.tag_followers', pagination=pagination,
+                           tag_followers=tag_followers)
 
 
 '''

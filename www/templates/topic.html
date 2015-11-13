@@ -1,0 +1,19 @@
+{% extends "__base__.html" %}
+
+{% block title %}{{ topic.title }} - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <img class="img-rounded" src="{{ url_for('static', filename=topic.image) }}">{{ topic.title }}
+    <p>{{ topic.desc }}</p>
+    <p>
+        {% if not current_user.is_following(topic) %}
+        <a href="{{ url_for('main.follow_tag',id=topic.id) }}" class="btn btn-primary">关注</a>
+        {% else %}
+        <a href="{{ url_for('main.unfollow_tag', id=topic.id) }}" class="btn btn-default">取消关注</a>
+        {% endif %}
+        <a href="{{ url_for('main.tag_followers', id=topic.id) }}">
+            <span class="badge">{{ topic.users.count() }}</span>人关注了该话题</a>
+    </p>
+</div>
+{% endblock %}

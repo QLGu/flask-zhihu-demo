@@ -46,6 +46,11 @@ class EditAvatarForm(Form):
     ])
     submit = SubmitField('上传头像')
 
+class AddTagForm(Form):
+    title = StringField('话题名称', validators=[Required(), Length(0, 50)])
+    desc = TextAreaField('话题描述', validators=[Required(), Length(0, 50)])
+    submit = SubmitField('发布')
+
 class AddQuestionForm(Form):
     title = StringField('写下你的问题', validators=[Required(), Length(0, 50)])
     content = TextAreaField('问题说明（可选）：')
