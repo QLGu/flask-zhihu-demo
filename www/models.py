@@ -87,6 +87,10 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     confirmed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
+    user_questions = db.relationship('Question', backref='question_author', lazy='dynamic')
+    user_answers = db.relationship('Answer', backref='answer_author', lazy='dynamic')
+    user_collections = db.relationship('Collection', backref='collection_author', lazy='dynamic')
+    user_comments = db.relationship('Comment', backref='comment_author', lazy='dynamic')
     followed = db.relationship('Follow',
                                foreign_keys=[Follow.follower_id],
                                backref=db.backref('follower', lazy='joined'),
@@ -117,10 +121,6 @@ class User(UserMixin, db.Model):
                                   backref=db.backref('set_user', lazy='joined'),
                                   lazy='dynamic',
                                   cascade='all, delete-orphan')
-    user_questions = db.relationship('Question', primaryjoin='User.id==Question.author_id', backref='question_user', lazy='dynamic')
-    user_answers = db.relationship('Answer', primaryjoin='User.id==Answer.author_id', backref='answer_user', lazy='dynamic')
-    sender = db.relationship('Message', primaryjoin='User.id==Message.sender_id', backref='message_sender', lazy='dynamic')
-    receiver = db.relationship('Message', primaryjoin='User.id==Message.receiver_id', backref='message_receiver', lazy='dynamic')
 
     def __init__(self, email, name, password,image):
         self.email = email
@@ -162,6 +162,7 @@ class User(UserMixin, db.Model):
         db.session.commit()
         return True
 
+    ############  用户关注与被关注  ############
     def follow(self, user):
         if not self.is_following(user):
             f = Follow(follower=self, followed=user)
@@ -180,6 +181,7 @@ class User(UserMixin, db.Model):
     def is_followed_by(self, user):
         return self.followers.filter_by(follower_id=user.id).first() is not None
 
+    ############  用户关注话题  ############
     def follow_tag(self, tag):
         if not self.is_following_tag(tag):
             f = Tagsusers(user_set=self, tag_set=tag)
@@ -194,6 +196,22 @@ class User(UserMixin, db.Model):
 
     def is_following_tag(self, tag):
         return self.tags.filter_by(tags_id=tag.id).first() is not None
+
+    ############  用户关注问题  ############
+    def follow_question(self, question):
+        if not self.is_following_question(question):
+            f = Questionsusers(q_user=self, u_question=question)
+            db.session.add(f)
+            db.session.commit()
+
+    def unfollow_question(self, question):
+        f = self.questions.filter_by(questions_id=question.id).first()
+        if f:
+            db.session.delete(f)
+            db.session.commit()
+
+    def is_following_question(self, question):
+        return self.questions.filter_by(questions_id=question.id).first() is not None
 
     def __repr__(self):
         return '<User %r>' % self.email
@@ -217,8 +235,8 @@ class Question(db.Model):
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     modified_at = db.Column(db.DateTime, default=datetime.now)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    question_comments = db.relationship('Comment', primaryjoin='Question.id==Comment.question_id', backref='comment_question', lazy='dynamic')
-    question_answers = db.relationship('Answer', primaryjoin='Question.id==Answer.question_id', backref='answer_question', lazy='dynamic')
+    question_answers = db.relationship('Answer', backref='answer_question', lazy='dynamic')
+    question_comments = db.relationship('Comment', backref='comment_question', lazy='dynamic')
     users = db.relationship('Questionsusers',
                             foreign_keys=[Questionsusers.questions_id],
                             backref=db.backref('u_question', lazy='joined'),
@@ -233,6 +251,27 @@ class Question(db.Model):
     def __init__(self, title, content):
         self.title = title
         self.content = content
+
+
+    ############  关注问题的用户  ############
+    def question_is_followed_by(self, user):
+        return self.users.filter_by(users_id=user.id).first() is not None
+
+    ############  问题加上话题标签  ############
+    def question_follow_tag(self, tag):
+        if not self.question_is_following_tag(tag):
+            f = Questionstags(t_question=self, q_tag=tag)
+            db.session.add(f)
+            db.session.commit()
+
+    def question_unfollow_tag(self, tag):
+        f = self.tags.filter_by(tags_id=tag.id).first()
+        if f:
+            db.session.delete(f)
+            db.session.commit()
+
+    def question_is_following_tag(self, tag):
+        return self.tags.filter_by(tags_id=tag.id).first() is not None
 
     def __repr__(self):
         return "<Question %r>" % self.title
@@ -252,7 +291,7 @@ class Answer(db.Model):
     modified_at = db.Column(db.DateTime, default=datetime.now)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_id = db.Column(db.Integer, db.ForeignKey('questions.id'))
-    answer_comments = db.relationship('Comment', primaryjoin='Answer.id==Comment.answer_id', backref='comment_answer', lazy='dynamic')
+    answer_comments = db.relationship('Comment', backref='comment_answer', lazy='dynamic')
     users = db.relationship('Answersusers',
                             foreign_keys=[Answersusers.answers_id],
                             backref=db.backref('u_answer', lazy='joined'),
@@ -295,8 +334,13 @@ class Tag(db.Model):
         self.title = title
         self.desc = desc
 
+    ############  关注话题的用户  ############
     def tag_is_followed_by(self, user):
         return self.users.filter_by(users_id=user.id).first() is not None
+
+    ############  话题下的问题  ############
+    def tag_is_followed_by_question(self, question):
+        return self.questionrs.filter_by(questions_id=question.id).first() is not None
 
     def __repr__(self):
         return "<Tag %r>" % self.title
@@ -309,10 +353,8 @@ class Collection(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50), nullable=False)
     desc = db.Column(db.Text)
-    author = db.Column(db.String(50), nullable=False)
-    author_desc = db.Column(db.String(50), nullable=False)
-    author_image = db.Column(db.String(50), nullable=False)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     users = db.relationship('Collectionsusers',
                             foreign_keys=[Collectionsusers.collections_id],
                             backref=db.backref('set_collection', lazy='joined'),
@@ -336,19 +378,17 @@ class Collection(db.Model):
 class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.Text, nullable=False)
-    author = db.Column(db.String(50), nullable=False)
-    author_image = db.Column(db.String(50), nullable=False)
+    content = db.Column(db.Text)
+    content_html = db.Column(db.Text)
     vote_up = db.Column(db.Integer, default=0)
+    disabled = db.Column(db.Boolean)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_id = db.Column(db.Integer, db.ForeignKey('questions.id'))
     answer_id = db.Column(db.Integer, db.ForeignKey('answers.id'))
 
     def __init__(self, content):
         self.content = content
-
-    def __repr__(self):
-        return "<Comment %r>" % self.content
 
 
 ###################################  私信模型  ###################################
@@ -360,7 +400,9 @@ class Message(db.Model):
     message_status = db.Column(db.Enum('unread', 'read', 'delete'), default='unread', nullable=False)
     posted_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    sender = db.relationship('User', backref='send_messages', lazy='joined', foreign_keys=[sender_id])
     receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    receiver = db.relationship('User', backref='receive_messages', lazy='joined', foreign_keys=[receiver_id])
 
     def __init__(self, content):
         self.content = content

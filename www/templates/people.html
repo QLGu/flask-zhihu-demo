@@ -1,4 +1,5 @@
 {% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
 
 {% block title %}{{ user.name }} - 知乎Demo{% endblock %}
 
@@ -79,12 +80,37 @@
             </a>
         {% endfor %}
         </p>
-    <p>
-        {% if user == current_user %}
-        <a class="bth bth-danger" href="{{ url_for('main.edit_profile') }}">编辑我的资料</a>
-        <a class="bth bth-danger" href="{{ url_for('main.edit_avatar') }}">上传头像</a>
-        {% endif %}
-    </p>
+        <p>
+            {% if user == current_user %}
+            <a class="bth bth-danger" href="{{ url_for('main.edit_profile') }}">编辑我的资料</a>
+            <a class="bth bth-danger" href="{{ url_for('main.edit_avatar') }}">上传头像</a>
+            {% endif %}
+        </p>
     </div>
+    <div>
+        <p>
+            <a href="{{ url_for('main.people_questions', id=user.id) }}">提问 <span class="badge">{{ user.user_questions.count() }}</span></a>
+        </p>
+        <p>
+        {% for question in user.user_questions %}
+            <a href="{{ url_for('main.question', id=question.id) }}">{{ question.title }}</a>
+        {% endfor %}
+        </p>
+    </div>
+</div>
+<table class="table table-hover followers">
+    <thead><tr><th>Question</th></tr></thead>
+    {% for following_question in following_questions %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.question', id=following_question.question.id) }}">
+                {{ following_question.question.title }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, endpoint, id = user.id) }}
 </div>
 {% endblock %}

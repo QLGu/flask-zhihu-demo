@@ -5,10 +5,11 @@ __author__ = 'hipponensis'
 
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField, BooleanField, RadioField, TextAreaField, SelectField, SubmitField, ValidationError
-from wtforms.validators import Required, Length, Email, EqualTo
+from wtforms import StringField, PasswordField, BooleanField, RadioField, TextAreaField, SelectField, FieldList, SubmitField, ValidationError
+from wtforms.validators import Required, Length, Email, EqualTo, AnyOf
 
 from www.models import User
+
 
 class SigninForm(Form):
     email = StringField('邮箱', validators=[Required(), Length(1, 50), Email()])
@@ -48,11 +49,11 @@ class EditAvatarForm(Form):
 
 class AddTagForm(Form):
     title = StringField('话题名称', validators=[Required(), Length(0, 50)])
-    desc = TextAreaField('话题描述', validators=[Required(), Length(0, 50)])
+    desc = TextAreaField('话题描述', validators=[Required()])
     submit = SubmitField('发布')
 
 class AddQuestionForm(Form):
     title = StringField('写下你的问题', validators=[Required(), Length(0, 50)])
     content = TextAreaField('问题说明（可选）：')
-    question_tag = StringField('选择话题', validators=[Required(), Length(0, 50)])
+    tags = StringField('选择话题(多个标签可用,隔开，最多关联5个话题)', validators=[Required(), Length(0, 50)])
     submit = SubmitField('发布')

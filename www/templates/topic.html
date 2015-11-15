@@ -1,4 +1,5 @@
 {% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
 
 {% block title %}{{ topic.title }} - 知乎Demo{% endblock %}
 
@@ -7,7 +8,7 @@
     <img class="img-rounded" src="{{ url_for('static', filename=topic.image) }}">{{ topic.title }}
     <p>{{ topic.desc }}</p>
     <p>
-        {% if not current_user.is_following(topic) %}
+        {% if not current_user.is_following_tag(topic) %}
         <a href="{{ url_for('main.follow_tag',id=topic.id) }}" class="btn btn-primary">关注</a>
         {% else %}
         <a href="{{ url_for('main.unfollow_tag', id=topic.id) }}" class="btn btn-default">取消关注</a>
@@ -16,4 +17,20 @@
             <span class="badge">{{ topic.users.count() }}</span>人关注了该话题</a>
     </p>
 </div>
+<table class="table table-hover followers">
+    <thead><tr><th>Question</th></tr></thead>
+    {% for question in questions %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.question', id=question.question.id) }}">
+                {{ question.question.title }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, endpoint, id = topic.id) }}
+</div>
+
 {% endblock %}

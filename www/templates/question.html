@@ -1,13 +1,30 @@
 {% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
 
 {% block title %}{{ question.title }} - 知乎Demo{% endblock %}
 
 {% block page_content %}
 <div class="page-header">
+    {% for tag in tags %}
+    <p>
+        <a href="{{ url_for('main.topic', id=tag.tag.id) }}">
+            {{ tag.tag.title }}
+        </a>
+    </p>
+    {% endfor %}
     <h3>{{ question.title }}</h3>
     <p>{{ question.content }}</p>
-    <p>{{ question.question_user }}</p>
     <p>{{ created_time }}</p>
+    <p>{{ question.question_author.name }}</p>
+    <p>
+        {% if not current_user.is_following_question(question) %}
+        <a href="{{ url_for('main.follow_question',id=question.id) }}" class="btn btn-primary">关注</a>
+        {% else %}
+        <a href="{{ url_for('main.unfollow_question', id=question.id) }}" class="btn btn-default">取消关注</a>
+        {% endif %}
+        <a href="{{ url_for('main.question_followers', id=question.id) }}">
+            <span class="badge">{{ question.users.count() }}</span>人关注了该问题</a>
+    </p>
 
 </div>
 {% endblock %}

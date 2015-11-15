@@ -18,7 +18,7 @@ from flask.ext.login import login_user, logout_user, login_required, current_use
 from main import main
 from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddTagForm, AddQuestionForm
 from www import db
-from www.models import User, Question, Answer, Tag, Collection, Comment, Message
+from www.models import User, Question, Answer, Tag, Collection, Comment, Message, Questionstags
 from www.emailbinding import send_email
 
 
@@ -145,7 +145,15 @@ def resend_confirmation():
 @main.route('/people/<id>')
 def user(id):
     user = User.query.filter_by(id=id).first_or_404()
-    return render_template('people.html', user=user)
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.questions.paginate(page, per_page=100, error_out=False)
+    following_questions = [{'question': item.u_question} for item in pagination.items]
+    return render_template('people.html', user=user,
+                           endpoint='main.user', pagination=pagination,
+                           following_questions=following_questions)
 
 ############  编辑资料  ############
 @main.route('/people/edit', methods=['GET', 'POST'])
@@ -272,7 +280,7 @@ def followers(id):
 
 ###################################  话题视图  ###################################
 
-############  话题主页  ############
+############  话题动态  ############
 @main.route('/topic')
 @login_required
 def topic_index():
@@ -306,7 +314,7 @@ def topics_add():
             return redirect(url_for('main.topics'))
     return render_template('topics_add.html', form=form)
 
-############  话题分页  ############
+############  话题页面  ############
 @main.route('/topic/<id>')
 @login_required
 def topic(id):
@@ -314,7 +322,12 @@ def topic(id):
     if topic is None:
         flash('Invalid topic.')
         return redirect(url_for('main.index'))
-    return render_template('topic.html', topic=topic)
+    page = request.args.get('page', 1, type=int)
+    pagination = topic.questions.paginate(page, per_page=100, error_out=False)
+    questions = [{'question': item.t_question} for item in pagination.items]
+    return render_template('topic.html', topic=topic,
+                           endpoint='main.topic', pagination=pagination,
+                           questions=questions)
 
 ############  关注话题  ############
 @main.route('/topic/<id>/follow')
@@ -375,32 +388,107 @@ def tag_followers(id):
                            tag_followers=tag_followers)
 
 
-'''
+###################################  问题视图  ###################################
+
+############  问题页面  ############
 @main.route('/question/<id>')
+@login_required
 def question(id):
     question = Question.query.filter_by(id=id).first_or_404()
+    page = request.args.get('page', 1, type=int)
+    pagination = question.tags.paginate(page, per_page=100, error_out=False)
+    tags = [{'tag': item.q_tag} for item in pagination.items]
     if (datetime.datetime.now()-question.created_at).days == 0:
         created_time = datetime.datetime.strftime(question.created_at, '%H:%M')
     else:
         created_time = datetime.datetime.strftime(question.created_at, '%Y-%m-%d')
-    return render_template('question.html', question=question, created_time=created_time)
+    return render_template('question.html', question=question, tags=tags, created_time=created_time)
 
-
+############  添加问题  ############
 @main.route('/question/add', methods=['GET', 'POST'])
 @login_required
-def add_question():
+def question_add():
     form = AddQuestionForm()
     if form.validate_on_submit():
-        question = Question(title=form.title.data,
-                            content=form.content.data,
+        question = Question(title=form.title.data, content=form.content.data)
+        if Question.query.filter_by(title=form.title.data).first():
+            flash('该问题已创建。')
+        else:
+            tags = form.tags.data
+            topics = tags.split(',')
+            if len(topics) > 4:
+                flash('最多只能关注5个话题。')
+                topics = topics[:5]
+            author = User.query.filter_by(id=current_user.id).first()
+            question.question_author = author
+            db.session.commit()
+            for topic in topics:
+                tag = Tag.query.filter_by(title=topic).first()
+                question.question_follow_tag(tag)
+            flash('成功添加问题。')
+            return redirect(url_for('main.question', id=question.id))
+    return render_template('question_add.html', form=form)
 
-                            question_user=current_user._get_current_object())
-        db.session.add(question)
-        db.session.commit()
-        return redirect(url_for('main.question', id=question.id))
-    return render_template('add_question.html', form=form)
+###########  用户的提问  ###########
+@main.route('/people/<id>/questions')
+def people_questions(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.user_questions.paginate(page, per_page=100, error_out=False)
+    questions = pagination.items
+    return render_template('people_questions.html', user=user,
+                           endpoint='main.people_questions', pagination=pagination,
+                           questions=questions)
 
-'''
+############  用户关注问题  ############
+@main.route('/question/<id>/follow')
+@login_required
+def follow_question(id):
+    question = Question.query.filter_by(id=id).first()
+    if question is None:
+        flash('Invalid question.')
+        return redirect(url_for('main.index'))
+    if current_user.is_following_question(question):
+        flash('你已经关注了该问题。')
+        return redirect(url_for('main.question', id=id))
+    current_user.follow_question(question)
+    flash('你关注了问题： %s。' % question.title)
+    return redirect(url_for('main.question', id=id))
+
+############  用户取关问题  ############
+@main.route('/question/<id>/unfollow')
+@login_required
+def unfollow_question(id):
+    question = Question.query.filter_by(id=id).first()
+    if question is None:
+        flash('Invalid question.')
+        return redirect(url_for('main.index'))
+    if not current_user.is_following_question(question):
+        flash('你还没有关注该问题。')
+        return redirect(url_for('main.question', id=id))
+    current_user.unfollow_question(question)
+    flash('你取消了对问题： %s 的关注。' % question.title)
+    return redirect(url_for('main.question', id=id))
+
+###########  问题下的关注者  ###########
+@main.route('/question/<id>/followers')
+def question_followers(id):
+    question = Question.query.filter_by(id=id).first()
+    if question is None:
+        flash('Invalid question.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = question.users.paginate(page, per_page=100, error_out=False)
+    question_followers = [{'user': item.q_user} for item in pagination.items]
+    return render_template('question_followers.html', question=question,
+                           endpoint='main.question_followers', pagination=pagination,
+                           question_followers=question_followers)
+
+
+
 
 '''
 from datetime import datetime
