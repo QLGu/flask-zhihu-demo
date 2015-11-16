@@ -4,6 +4,8 @@
 __author__ = 'hipponensis'
 
 from datetime import datetime
+from markdown import markdown
+import bleach
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
@@ -389,6 +391,17 @@ class Comment(db.Model):
 
     def __init__(self, content):
         self.content = content
+
+    @staticmethod
+    def on_changed_content(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i', 'strong']
+        target.content_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'), tags=allowed_tags, strip=True))
+
+    def __repr__(self):
+        return "<Collection %r>" % self.content
+
+db.event.listen(Comment.content, 'set', Comment.on_changed_content)
+
 
 
 ###################################  私信模型  ###################################

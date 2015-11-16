@@ -16,9 +16,9 @@ from flask import render_template, request, redirect, url_for, abort, flash
 from flask.ext.login import login_user, logout_user, login_required, current_user
 
 from main import main
-from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddTagForm, AddQuestionForm
+from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddTagForm, AddQuestionForm, CommentForm
 from www import db
-from www.models import User, Question, Answer, Tag, Collection, Comment, Message, Questionstags
+from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
 
 
@@ -148,12 +148,8 @@ def user(id):
     if user is None:
         flash('Invalid user.')
         return redirect(url_for('main.index'))
-    page = request.args.get('page', 1, type=int)
-    pagination = user.questions.paginate(page, per_page=100, error_out=False)
-    following_questions = [{'question': item.u_question} for item in pagination.items]
-    return render_template('people.html', user=user,
-                           endpoint='main.user', pagination=pagination,
-                           following_questions=following_questions)
+    following_questions = user.questions.all()
+    return render_template('people.html', user=user, following_questions=following_questions)
 
 ############  编辑资料  ############
 @main.route('/people/edit', methods=['GET', 'POST'])
@@ -391,18 +387,27 @@ def tag_followers(id):
 ###################################  问题视图  ###################################
 
 ############  问题页面  ############
-@main.route('/question/<id>')
+@main.route('/question/<id>', methods=['GET', 'POST'])
 @login_required
 def question(id):
     question = Question.query.filter_by(id=id).first_or_404()
-    page = request.args.get('page', 1, type=int)
-    pagination = question.tags.paginate(page, per_page=100, error_out=False)
-    tags = [{'tag': item.q_tag} for item in pagination.items]
+    tags = question.tags.all()
     if (datetime.datetime.now()-question.created_at).days == 0:
         created_time = datetime.datetime.strftime(question.created_at, '%H:%M')
     else:
         created_time = datetime.datetime.strftime(question.created_at, '%Y-%m-%d')
-    return render_template('question.html', question=question, tags=tags, created_time=created_time)
+    form = CommentForm()
+    if form.validate_on_submit():
+        comment = Comment(content=form.content.data)
+        comment.comment_question = question
+        author = User.query.filter_by(id=current_user.id).first()
+        comment.comment_author = author
+        db.session.add(comment)
+        db.session.commit()
+        flash('评论成功')
+        return redirect(url_for('main.question', id=question.id))
+    comments = question.question_comments
+    return render_template('question.html', form=form, question=question, tags=tags, created_time=created_time, comments=comments)
 
 ############  添加问题  ############
 @main.route('/question/add', methods=['GET', 'POST'])
@@ -487,33 +492,39 @@ def question_followers(id):
                            endpoint='main.question_followers', pagination=pagination,
                            question_followers=question_followers)
 
+###################################   答案视图  ###################################
 
+############  答案页面  ############
+
+############  用户的回答  ############
+
+############  用户关注答案  ############
+
+############  用户取关答案  ############
 
 
 '''
-from datetime import datetime
-
-from flask import render_template, session, redirect, url_for, current_app
-
-from www import db
-from www.models import User
-from www.emailbinding import send_email
-from main import main
-from main.forms import UserForm
-
-@main.route('/', methods=['GET', 'POST'])
-def index():
-    form = UserForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user is None:
-            user = User(email=form.email.data)
-            db.session.add(user)
-            session['known'] = False
-        else:
-            session['known'] = True
-        session['email'] = form.email.data
-        form.email.data = ''
+@main.route('/comment/<id>/vote_up')
+@login_required
+def vote_up_comment(id):
+    comment = Comment.query.filter_by(id=id).first()
+    if comment is None:
+        flash('Invalid comment.')
         return redirect(url_for('main.index'))
-    return render_template('index.html', form=form, email=session.get('email'), known=session.get('known', False), current_time=datetime.utcnow())
+    vote = comment.vote_up
+    vote = vote + 1
+    comment.vote_up = vote
+    return redirect(url_for('main.question', id=comment.comment_question.id))
+
+@main.route('/comment/<id>/vote_down')
+@login_required
+def vote_down_comment(id):
+    comment = Comment.query.filter_by(id=id).first()
+    if comment is None:
+        flash('Invalid comment.')
+        return redirect(url_for('main.index'))
+    vote = comment.vote_up
+    vote = vote - 1
+    comment.vote_up = vote
+    return redirect(url_for('main.question', id=comment.comment_question.id))
 '''

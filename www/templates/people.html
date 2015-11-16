@@ -103,14 +103,11 @@
     {% for following_question in following_questions %}
     <tr>
         <td>
-            <a href="{{ url_for('main.question', id=following_question.question.id) }}">
-                {{ following_question.question.title }}
+            <a href="{{ url_for('main.question', id=following_question.u_question.id) }}">
+                {{ following_question.u_question.title }}
             </a>
         </td>
     </tr>
     {% endfor %}
 </table>
-<div class="pagination">
-    {{ macros.pagination_widget(pagination, endpoint, id = user.id) }}
-</div>
 {% endblock %}

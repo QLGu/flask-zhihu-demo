@@ -1,20 +1,47 @@
 {% extends "__base__.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
 {% import "__macros__.html" as macros %}
 
 {% block title %}{{ question.title }} - 知乎Demo{% endblock %}
 
+{% block head %}
+{{ super() }}
+<script src="http://libs.baidu.com/jquery/2.0.0/jquery.js"></script>
+<script type="text/javascript">
+jQuery(document).ready(function($){
+$('.btn1').click(function(){ //.btn1是展开的按钮,没给它取个好名字,暂时称呼它为爸爸按钮= =
+$('.children').show();//点一下爹地,把孩子叫出来
+$(this).hide();$('.btn2').show();//.btn2(暂时称它为妈妈按钮) : 把妈妈叫出来,把爸爸叫回去
+});
+$('.btn2').click(function(){ //点一下妈咪
+$('.children').hide();//把孩子叫回去
+$(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
+});
+});
+</script>
+{% endblock %}
+
 {% block page_content %}
 <div class="page-header">
-    {% for tag in tags %}
     <p>
-        <a href="{{ url_for('main.topic', id=tag.tag.id) }}">
-            {{ tag.tag.title }}
+        {% for tag in tags %}
+        <a href="{{ url_for('main.topic', id=tag.q_tag.id) }}">
+            <span class="label label-primary">{{ tag.q_tag.title }}</span>
         </a>
+        {% endfor %}
     </p>
-    {% endfor %}
     <h3>{{ question.title }}</h3>
     <p>{{ question.content }}</p>
-    <p>{{ created_time }}</p>
+    <p>
+        {{ created_time }}
+        <mark class="btn1">▽添加评论</mark><mark class="btn2" style="display:none;">▽收起评论</mark>
+    </p>
+    <div class="children" style="display:none;">
+        {% include '__comments__.html' %}
+        <div class="comment-form">
+            {{ wtf.quick_form(form) }}
+        </div>
+    </div>
     <p>{{ question.question_author.name }}</p>
     <p>
         {% if not current_user.is_following_question(question) %}
@@ -27,4 +54,5 @@
     </p>
 
 </div>
+
 {% endblock %}

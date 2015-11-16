@@ -1,0 +1,25 @@
+<ul class="comments">
+    {% for comment in comments %}
+    <li class="comment">
+        <div class="comment-thumbnail">
+            <a href="{{ url_for('main.user', id=comment.comment_author.id) }}">
+                <img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=comment.comment_author.image) }}" height="36" width="36">
+            </a>
+        </div>
+        <div class="comment-content">
+            <div class="comment-author"><a href="{{ url_for('main.user', id=comment.comment_author.id) }}">{{ comment.comment_author.name }}</a></div>
+            <div class="comment-body">
+                {% if comment.content_html %}
+                    {{ comment.content_html | safe }}
+                {% else %}
+                    {{ comment.content }}
+                {% endif %}
+            </div>
+            <div class="comment-date">{{ comment.vote_up }}赞</div>
+            <div>
+                {{ moment(comment.created_at, local=True).fromNow() }}
+            </div>
+        </div>
+    </li>
+    {% endfor %}
+</ul>

@@ -57,3 +57,7 @@ class AddQuestionForm(Form):
     content = TextAreaField('问题说明（可选）：')
     tags = StringField('选择话题(多个标签可用,隔开，最多关联5个话题)', validators=[Required(), Length(0, 50)])
     submit = SubmitField('发布')
+
+class CommentForm(Form):
+    content = StringField('', validators=[Required()])
+    submit = SubmitField('评论')
