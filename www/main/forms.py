@@ -5,6 +5,7 @@ __author__ = 'hipponensis'
 
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileField, FileAllowed, FileRequired
+from flask.ext.pagedown.fields import PageDownField
 from wtforms import StringField, PasswordField, BooleanField, RadioField, TextAreaField, SelectField, FieldList, SubmitField, ValidationError
 from wtforms.validators import Required, Length, Email, EqualTo, AnyOf
 
@@ -57,6 +58,10 @@ class AddQuestionForm(Form):
     content = TextAreaField('问题说明（可选）：')
     tags = StringField('选择话题(多个标签可用,隔开，最多关联5个话题)', validators=[Required(), Length(0, 50)])
     submit = SubmitField('发布')
+
+class AddAnswerForm(Form):
+    content = PageDownField('', validators=[Required()])
+    submit = SubmitField('发布回答')
 
 class CommentForm(Form):
     content = StringField('', validators=[Required()])

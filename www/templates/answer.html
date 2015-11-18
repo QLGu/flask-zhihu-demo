@@ -2,7 +2,7 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% import "__macros__.html" as macros %}
 
-{% block title %}{{ question.title }} - 知乎Demo{% endblock %}
+{% block title %}{{ answer.title }} - {{ question.question_author.name }}的回答 - 知乎Demo{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -15,6 +15,19 @@ $(this).hide();$('.btn2').show();//.btn2(暂时称它为妈妈按钮) : 把妈�
 $('.btn2').click(function(){ //点一下妈咪
 $('.children').hide();//把孩子叫回去
 $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
+});
+});
+</script>
+
+<script type="text/javascript">
+jQuery(document).ready(function($){
+$('.btn3').click(function(){
+$('.children2').show();
+$(this).hide();$('.btn4').show();
+});
+$('.btn4').click(function(){
+$('.children2').hide();
+$(this).hide();$('.btn3').show();
 });
 });
 </script>
@@ -59,9 +72,22 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
             <span class="badge">{{ question.users.count() }}</span>人关注了该问题</a>
     </p>
 </div>
-
+<div>
+    <a href="{{ url_for('main.question',id=question.id) }}">所有答案</a>
+</div>
+<div>
+    <p> - </p>
+</div>
+<div style="height:100%; width:8px;float:left;">
+    {% if not current_user.is_following_answer(answer) %}
+    <a href="{{ url_for('main.follow_answer',id=answer.id) }}" class="btn btn-default"><p>▲</p>{{ answer.users.count() }}</a>
+    {% else %}
+    <a href="{{ url_for('main.unfollow_answer', id=answer.id) }}" class="btn btn-primary"><p>▲</p>{{ answer.users.count() }}</a>
+    {% endif %}
+    <p><a href="{{ url_for('main.answer', aid=answer.id, qid=answer.answer_question.id) }}" class="btn btn-default">▼</a></p>
+</div>
+<div style="height:100%; width:900px;">
 <ul class="answers">
-    {% for answer in answers %}
     <li class="answer">
         <div class="answer-image">
             <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">
@@ -70,10 +96,22 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
         </div>
         <div class="answer-content">
             <div class="answer-author">
+                <h4>
                 <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">{{ answer.answer_author.name }}</a>
                 {% if answer.answer_author.one_desc!=None %}
                 {{ answer.answer_author.one_desc }}
                 {% endif %}
+                </h4>
+            </div>
+            <div class="answer-date">
+                {% for answer_follower in answer_followers %}
+                {% if loop.index <=3 %}
+                <a href="{{ url_for('main.user', id=answer_follower.user.id) }}">{{ answer_follower.user.name }}</a>
+                {% endif %}
+                {% else %}
+                <mark> </mark>
+                {% endfor %}
+                 等人人赞同了该答案
             </div>
             <div class="answer-body">
                 {{ answer.content }}
@@ -87,33 +125,24 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
                 {% else %}
                 编辑于{{ answer.modified_at }}
                 {% endif %}
-                <a href="{{ url_for('main.answer', qid=answer.answer_question.id, aid=answer.id) }}">
+                <mark class="btn3">
                 {% if answer.answer_comments.count()==0 %}
                 ¶添加评论
                 {% else %}
                 ¶{{ answer.answer_comments.count() }}条评论
                 {% endif %}
-                </a>
+                </mark>
+                <mark class="btn4" style="display:none;">▽收起评论</mark>
                 ♥感谢 ★收藏 ·没有帮助
+                <div class="children2" style="display:none;">
+                    {% include 'answer_comments.html' %}
+                    <div class="comment-form">
+                        {{ wtf.quick_form(form_answer_comment) }}
+                    </div>
+                </div>
             </div>
         </div>
     </li>
-    {% endfor %}
 </ul>
-<div>
-    {% for question_answer in question.question_answers %}
-    {% if question_answer.answer_author %}
-    <h3>你已回答过此问题。</h3>
-    {% else %}
-    {{ wtf.quick_form(form_add_answer) }}
-    {% endif %}
-    {% else %}
-    {{ wtf.quick_form(form_add_answer) }}
-    {% endfor %}
 </div>
-{% endblock %}
-
-{% block scripts %}
-{{ super() }}
-{{ pagedown.include_pagedown() }}
 {% endblock %}

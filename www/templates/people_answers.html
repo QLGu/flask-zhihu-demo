@@ -1,0 +1,53 @@
+{% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
+
+{% block title %}{{ user.name }} 的回答 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>{{ user.name }} 的回答</h1>
+</div>
+<div>
+    <ul class="answers">
+    {% for answer in answers %}
+            <a href="{{ url_for('main.answer',qid=answer.answer_question.id, aid=answer.id) }}">
+                {{ answer.answer_question.title }}
+            </a>
+            <li class="answer">
+                <div class="answer-content">
+                    <div class="answer-author">
+                        <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">{{ answer.answer_author.name }}</a>
+                        {% if answer.answer_author.one_desc!=None %}
+                        {{ answer.answer_author.one_desc }}
+                        {% endif %}
+                    </div>
+                    <div class="answer-body" id="content">
+                        {{ answer.content }}
+                        {% if current_user == answer.answer_author %}
+                        <a href="{{ url_for('main.answer_edit', id=answer.id) }}">✄修改</a>
+                        {% endif %}
+                    </div>
+                    <div class="answer-date">
+                        {% if not answer.modified_at %}
+                        发布于 {{ moment(answer.created_at, local=True).fromNow() }}
+                        {% else %}
+                        编辑于{{ answer.modified_at }}
+                        {% endif %}
+                        <a href="{{ url_for('main.answer', qid=answer.answer_question.id, aid=answer.id) }}">
+                        {% if answer.answer_comments.count()==0 %}
+                        ¶添加评论
+                        {% else %}
+                        ¶{{ answer.answer_comments.count() }}条评论
+                        {% endif %}
+                        </a>
+                        ♥感谢 ★收藏 ·没有帮助
+                    </div>
+                </div>
+            </li>
+    {% endfor %}
+    </ul>
+</div>
+<div class="pagination">
+    {{ macros.pagination_widget(pagination, endpoint, id = user.id) }}
+</div>
+{% endblock %}

@@ -87,16 +87,27 @@
             {% endif %}
         </p>
     </div>
-    <div>
-        <p>
-            <a href="{{ url_for('main.people_questions', id=user.id) }}">提问 <span class="badge">{{ user.user_questions.count() }}</span></a>
-        </p>
-        <p>
+</div>
+<div>
+    <p>
+        <a href="{{ url_for('main.people_questions', id=user.id) }}">提问 <span class="badge">{{ user.user_questions.count() }}</span></a>
+    </p>
+    <p>
         {% for question in user.user_questions %}
             <a href="{{ url_for('main.question', id=question.id) }}">{{ question.title }}</a>
         {% endfor %}
-        </p>
-    </div>
+    </p>
+</div>
+<div>
+    <p>
+        <a href="{{ url_for('main.people_answers', id=user.id) }}">回答 <span class="badge">{{ user.user_answers.count() }}</span></a>
+    </p>
+    <p>
+        {% for answer in user.user_answers %}
+        <a href="{{ url_for('main.answer', qid=answer.answer_question.id, aid=answer.id) }}">{{ answer.answer_question.title }}</a>
+        {{ answer.content }}
+        {% endfor %}
+    </p>
 </div>
 <table class="table table-hover followers">
     <thead><tr><th>Question</th></tr></thead>
@@ -110,4 +121,5 @@
     </tr>
     {% endfor %}
 </table>
+
 {% endblock %}

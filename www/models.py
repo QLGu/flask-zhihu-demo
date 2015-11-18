@@ -215,6 +215,22 @@ class User(UserMixin, db.Model):
     def is_following_question(self, question):
         return self.questions.filter_by(questions_id=question.id).first() is not None
 
+    ############  用户赞同回答  ############
+    def follow_answer(self, answer):
+        if not self.is_following_answer(answer):
+            f = Answersusers(a_user=self, u_answer=answer)
+            db.session.add(f)
+            db.session.commit()
+
+    def unfollow_answer(self, answer):
+        f = self.answers.filter_by(answers_id=answer.id).first()
+        if f:
+            db.session.delete(f)
+            db.session.commit()
+
+    def is_following_answer(self, answer):
+        return self.answers.filter_by(answers_id=answer.id).first() is not None
+
     def __repr__(self):
         return '<User %r>' % self.email
 
@@ -235,7 +251,7 @@ class Question(db.Model):
     title = db.Column(db.String(50), nullable=False)
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
-    modified_at = db.Column(db.DateTime, default=datetime.now)
+    modified_at = db.Column(db.DateTime)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_answers = db.relationship('Answer', backref='answer_question', lazy='dynamic')
     question_comments = db.relationship('Comment', backref='comment_question', lazy='dynamic')
@@ -290,7 +306,7 @@ class Answer(db.Model):
     vote_up = db.Column(db.Integer, default=0)
     vote_down = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
-    modified_at = db.Column(db.DateTime, default=datetime.now)
+    modified_at = db.Column(db.DateTime)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_id = db.Column(db.Integer, db.ForeignKey('questions.id'))
     answer_comments = db.relationship('Comment', backref='comment_answer', lazy='dynamic')
@@ -307,6 +323,26 @@ class Answer(db.Model):
 
     def __init__(self, content):
         self.content = content
+
+    ############  赞同问题的用户  ############
+    def answer_is_followed_by(self, user):
+        return self.users.filter_by(users_id=user.id).first() is not None
+
+    ############  收藏答案  ############
+    def answer_follow_collection(self, collection):
+        if not self.answer_is_following_collection(collection):
+            f = Answerscollections(c_answer=self, a_collection=collection)
+            db.session.add(f)
+            db.session.commit()
+
+    def answer_unfollow_collection(self, collection):
+        f = self.collections.filter_by(collections_id=collection.id).first()
+        if f:
+            db.session.delete(f)
+            db.session.commit()
+
+    def answer_is_following_collection(self, collection):
+        return self.collections.filter_by(collections_id=collection.id).first() is not None
 
     def __repr__(self):
         return "<Answer %r>" % self.content
@@ -381,7 +417,6 @@ class Comment(db.Model):
     __tablename__ = 'comments'
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text)
-    content_html = db.Column(db.Text)
     vote_up = db.Column(db.Integer, default=0)
     disabled = db.Column(db.Boolean)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)

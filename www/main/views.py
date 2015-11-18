@@ -16,7 +16,8 @@ from flask import render_template, request, redirect, url_for, abort, flash
 from flask.ext.login import login_user, logout_user, login_required, current_user
 
 from main import main
-from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm, AddTagForm, AddQuestionForm, CommentForm
+from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm,\
+    AddTagForm, AddQuestionForm, AddAnswerForm, CommentForm
 from www import db
 from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
@@ -396,9 +397,9 @@ def question(id):
         created_time = datetime.datetime.strftime(question.created_at, '%H:%M')
     else:
         created_time = datetime.datetime.strftime(question.created_at, '%Y-%m-%d')
-    form = CommentForm()
-    if form.validate_on_submit():
-        comment = Comment(content=form.content.data)
+    form_question_comment = CommentForm(prefix="form_question_comment")
+    if form_question_comment.validate_on_submit() and form_question_comment.submit.data:
+        comment = Comment(content=form_question_comment.content.data)
         comment.comment_question = question
         author = User.query.filter_by(id=current_user.id).first()
         comment.comment_author = author
@@ -406,8 +407,21 @@ def question(id):
         db.session.commit()
         flash('评论成功')
         return redirect(url_for('main.question', id=question.id))
-    comments = question.question_comments
-    return render_template('question.html', form=form, question=question, tags=tags, created_time=created_time, comments=comments)
+    question_comments = question.question_comments
+    form_add_answer = AddAnswerForm(prefix="form_add_answer")
+    if form_add_answer.validate_on_submit() and form_add_answer.submit.data:
+        ans = Answer(content=form_add_answer.content.data)
+        ans.answer_question = question
+        author = User.query.filter_by(id=current_user.id).first()
+        ans.answer_author = author
+        db.session.add(ans)
+        db.session.commit()
+        flash('回答成功')
+        return redirect(url_for('main.question', id=question.id))
+    answers = question.question_answers
+    return render_template('question.html', question=question, tags=tags, created_time=created_time,
+                               form_question_comment=form_question_comment, question_comments=question_comments,
+                               form_add_answer=form_add_answer, answers=answers)
 
 ############  添加问题  ############
 @main.route('/question/add', methods=['GET', 'POST'])
@@ -495,12 +509,125 @@ def question_followers(id):
 ###################################   答案视图  ###################################
 
 ############  答案页面  ############
+@main.route('/question/<qid>/answer/<aid>', methods=['GET', 'POST'])
+@login_required
+def answer(qid, aid):
+    answer = Answer.query.filter_by(id=aid).first_or_404()
+    question = Question.query.filter_by(id=answer.answer_question.id).first_or_404()
+    tags = question.tags.all()
+    if (datetime.datetime.now()-question.created_at).days == 0:
+        created_time = datetime.datetime.strftime(question.created_at, '%H:%M')
+    else:
+        created_time = datetime.datetime.strftime(question.created_at, '%Y-%m-%d')
+    if (datetime.datetime.now()-answer.created_at).days == 0:
+        answer_created_time = datetime.datetime.strftime(answer.created_at, '%H:%M')
+    else:
+        answer_created_time = datetime.datetime.strftime(answer.created_at, '%Y-%m-%d')
+    form_question_comment = CommentForm(prefix="form_question_comment")
+    if form_question_comment.validate_on_submit() and form_question_comment.submit.data:
+        comment = Comment(content=form_question_comment.content.data)
+        comment.comment_question = question
+        author = User.query.filter_by(id=current_user.id).first()
+        comment.comment_author = author
+        db.session.add(comment)
+        db.session.commit()
+        flash('评论成功')
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    question_comments = question.question_comments
+    form_answer_comment = CommentForm(prefix="form_answer_comment")
+    if form_answer_comment.validate_on_submit() and form_answer_comment.submit.data:
+        comment = Comment(content=form_answer_comment.content.data)
+        comment.comment_answer = answer
+        author = User.query.filter_by(id=current_user.id).first()
+        comment.comment_author = author
+        db.session.add(comment)
+        db.session.commit()
+        flash('评论成功')
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    answer_comments = answer.answer_comments
+    page = request.args.get('page', 1, type=int)
+    pagination = answer.users.paginate(page, per_page=100, error_out=False)
+    answer_followers = [{'user': item.a_user} for item in pagination.items]
+    return render_template('answer.html', question=question, answer=answer, tags=tags,
+                           created_time=created_time, answer_created_time=answer_created_time,
+                           form_question_comment=form_question_comment, question_comments=question_comments,
+                           form_answer_comment=form_answer_comment, answer_comments=answer_comments,
+                           answer_followers=answer_followers)
+
+############  编辑答案  ############
+@main.route('/answer/<id>/edit', methods=['GET', 'POST'])
+@login_required
+def answer_edit(id):
+    answer = Answer.query.filter_by(id=id).first()
+    form_answer_edit = AddAnswerForm(prefix="form_answer_edit")
+    if form_answer_edit.validate_on_submit() and form_answer_edit.submit.data:
+        answer.content = form_answer_edit.content.data
+        answer.modified_at = datetime.datetime.now()
+        db.session.add(answer)
+        db.session.commit()
+        return redirect(url_for('main.answer', id=answer.id))
+    return render_template('answer_edit.html', form_answer_edit=form_answer_edit, answer=answer)
+
 
 ############  用户的回答  ############
+@main.route('/people/<id>/answers')
+def people_answers(id):
+    user = User.query.filter_by(id=id).first()
+    if user is None:
+        flash('Invalid user.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = user.user_answers.paginate(page, per_page=100, error_out=False)
+    answers = pagination.items
+    return render_template('people_answers.html', user=user,
+                           endpoint='main.people_answers', pagination=pagination,
+                           answers=answers)
 
-############  用户关注答案  ############
+############  用户点赞答案  ############
+@main.route('/answer/<id>/follow')
+@login_required
+def follow_answer(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if answer is None:
+        flash('Invalid answer.')
+        return redirect(url_for('main.index'))
+    if current_user.is_following_answer(answer):
+        flash('你已经赞同了该答案。')
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    current_user.follow_answer(answer)
+    return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
 
-############  用户取关答案  ############
+############  用户取赞答案  ############
+@main.route('/answer/<id>/unfollow')
+@login_required
+def unfollow_answer(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if answer is None:
+        flash('Invalid answer.')
+        return redirect(url_for('main.index'))
+    if not current_user.is_following_answer(answer):
+        flash('你还没有赞同该答案。')
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    current_user.unfollow_answer(answer)
+    return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+
+############  答案点赞的用户  ############ 放到问题和答案页面
+
+############  用户点赞的答案  ############ 放到个人主页
+
+
+
+
+###################################   收藏视图  ###################################
+
+############  收藏页面  ############关注功能不实现了
+
+############  创建收藏  ############
+
+############  收藏答案  ############表单 答案关注收藏
+
+############  取消收藏  ############
+
 
 
 '''
