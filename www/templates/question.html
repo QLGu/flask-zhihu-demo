@@ -60,8 +60,17 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
     </p>
 </div>
 
+<div style="height:100%; width:800px;">
 <ul class="answers">
     {% for answer in answers %}
+    <div style="height:100%; width:0px;float:left;">
+    {% if not current_user.is_following_answer(answer) %}
+    <a href="{{ url_for('main.follow_answer2',id=answer.id) }}" class="btn btn-default"><p>▲</p>{{ answer.users.count() }}</a>
+    {% else %}
+    <a href="{{ url_for('main.unfollow_answer2', id=answer.id) }}" class="btn btn-primary"><p>▲</p>{{ answer.users.count() }}</a>
+    {% endif %}
+    <p><a href="{{ url_for('main.question', id=answer.answer_question.id) }}" class="btn btn-default">▼</a></p>
+    </div>
     <li class="answer">
         <div class="answer-image">
             <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">
@@ -75,10 +84,20 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
                 {{ answer.answer_author.one_desc }}
                 {% endif %}
             </div>
+            <div class="answer-date">
+                {% for answer_follower in answer.users.all() %}
+                {% if loop.index <=3 %}
+                <a href="{{ url_for('main.user', id=answer_follower.a_user.id) }}">{{ answer_follower.a_user.name }}</a>
+                {% endif %}
+                {% else %}
+                <mark> </mark>
+                {% endfor %}
+                ……<a href="{{ url_for('main.answer_followers', id=answer.id) }}">等人赞同了该答案</a>
+            </div>
             <div class="answer-body">
                 {{ answer.content }}
                 {% if current_user == answer.answer_author %}
-                <a href="{{ url_for('main.answer_edit', id=answer.id) }}">✄修改</a>
+                <a href="{{ url_for('main.answer_edit2', id=answer.id) }}">✄修改</a>
                 {% endif %}
             </div>
             <div class="answer-date">
@@ -94,12 +113,15 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
                 ¶{{ answer.answer_comments.count() }}条评论
                 {% endif %}
                 </a>
-                ♥感谢 ★收藏 ·没有帮助
+                ♥感谢
+                <a href="{{ url_for('main.answer_collect', id=answer.id) }}">★收藏</a>
+                ·没有帮助
             </div>
         </div>
     </li>
     {% endfor %}
 </ul>
+</div>
 <div>
     {% for question_answer in question.question_answers %}
     {% if question_answer.answer_author %}

@@ -74,20 +74,18 @@ $(this).hide();$('.btn3').show();
 </div>
 <div>
     <a href="{{ url_for('main.question',id=question.id) }}">所有答案</a>
+    <p>.</p>
 </div>
-<div>
-    <p> - </p>
-</div>
-<div style="height:100%; width:8px;float:left;">
+<div style="height:100%; width:800px;">
+<ul class="answers">
+    <div style="height:100%; width:0px;float:left;">
     {% if not current_user.is_following_answer(answer) %}
     <a href="{{ url_for('main.follow_answer',id=answer.id) }}" class="btn btn-default"><p>▲</p>{{ answer.users.count() }}</a>
     {% else %}
     <a href="{{ url_for('main.unfollow_answer', id=answer.id) }}" class="btn btn-primary"><p>▲</p>{{ answer.users.count() }}</a>
     {% endif %}
     <p><a href="{{ url_for('main.answer', aid=answer.id, qid=answer.answer_question.id) }}" class="btn btn-default">▼</a></p>
-</div>
-<div style="height:100%; width:900px;">
-<ul class="answers">
+    </div>
     <li class="answer">
         <div class="answer-image">
             <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">
@@ -96,22 +94,20 @@ $(this).hide();$('.btn3').show();
         </div>
         <div class="answer-content">
             <div class="answer-author">
-                <h4>
                 <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">{{ answer.answer_author.name }}</a>
                 {% if answer.answer_author.one_desc!=None %}
                 {{ answer.answer_author.one_desc }}
                 {% endif %}
-                </h4>
             </div>
             <div class="answer-date">
-                {% for answer_follower in answer_followers %}
+                {% for answer_follower in answer.users.all() %}
                 {% if loop.index <=3 %}
-                <a href="{{ url_for('main.user', id=answer_follower.user.id) }}">{{ answer_follower.user.name }}</a>
+                <a href="{{ url_for('main.user', id=answer_follower.a_user.id) }}">{{ answer_follower.a_user.name }}</a>
                 {% endif %}
                 {% else %}
                 <mark> </mark>
                 {% endfor %}
-                 等人人赞同了该答案
+                ……<a href="{{ url_for('main.answer_followers', id=answer.id) }}">等人赞同了该答案</a>
             </div>
             <div class="answer-body">
                 {{ answer.content }}
@@ -133,7 +129,9 @@ $(this).hide();$('.btn3').show();
                 {% endif %}
                 </mark>
                 <mark class="btn4" style="display:none;">▽收起评论</mark>
-                ♥感谢 ★收藏 ·没有帮助
+                ♥感谢
+                <a href="{{ url_for('main.answer_collect', id=answer.id) }}">★收藏</a>
+                ·没有帮助
                 <div class="children2" style="display:none;">
                     {% include 'answer_comments.html' %}
                     <div class="comment-form">

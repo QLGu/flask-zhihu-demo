@@ -1,0 +1,25 @@
+{% extends "__base__.html" %}
+{% import "__macros__.html" as macros %}
+
+{% block title %}{{ user.name }} 的收藏 - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <h1>{{ user.name }} 的收藏</h1>
+    {% if user == current_user %}
+    <a href="{{ url_for('main.collection_add', id=user.id) }}">添加收藏</a>
+    {% endif %}
+</div>
+<table class="table table-hover followers">
+    <thead><tr><th>Collection</th></tr></thead>
+    {% for collection in collections %}
+    <tr>
+        <td>
+            <a href="{{ url_for('main.collection', id=collection.id) }}">
+                {{ collection.title }}
+            </a>
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

@@ -17,7 +17,7 @@ from flask.ext.login import login_user, logout_user, login_required, current_use
 
 from main import main
 from main.forms import SigninForm, RegistrationForm, EditProfileForm, EditAvatarForm,\
-    AddTagForm, AddQuestionForm, AddAnswerForm, CommentForm
+    AddTagForm, AddQuestionForm, AddAnswerForm, CommentForm, AddCollectionForm, CollectForm
 from www import db
 from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
@@ -150,7 +150,12 @@ def user(id):
         flash('Invalid user.')
         return redirect(url_for('main.index'))
     following_questions = user.questions.all()
-    return render_template('people.html', user=user, following_questions=following_questions)
+    following_answers = user.answers.all()
+    following_tags = user.tags.all()
+    return render_template('people.html', user=user,
+                           following_questions=following_questions,
+                           following_answers=following_answers,
+                           following_tags=following_tags)
 
 ############  编辑资料  ############
 @main.route('/people/edit', methods=['GET', 'POST'])
@@ -458,7 +463,7 @@ def people_questions(id):
     page = request.args.get('page', 1, type=int)
     pagination = user.user_questions.paginate(page, per_page=100, error_out=False)
     questions = pagination.items
-    return render_template('people_questions.html', user=user,
+    return render_template('following_questions.html', user=user,
                            endpoint='main.people_questions', pagination=pagination,
                            questions=questions)
 
@@ -545,14 +550,10 @@ def answer(qid, aid):
         flash('评论成功')
         return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
     answer_comments = answer.answer_comments
-    page = request.args.get('page', 1, type=int)
-    pagination = answer.users.paginate(page, per_page=100, error_out=False)
-    answer_followers = [{'user': item.a_user} for item in pagination.items]
     return render_template('answer.html', question=question, answer=answer, tags=tags,
                            created_time=created_time, answer_created_time=answer_created_time,
                            form_question_comment=form_question_comment, question_comments=question_comments,
-                           form_answer_comment=form_answer_comment, answer_comments=answer_comments,
-                           answer_followers=answer_followers)
+                           form_answer_comment=form_answer_comment, answer_comments=answer_comments)
 
 ############  编辑答案  ############
 @main.route('/answer/<id>/edit', methods=['GET', 'POST'])
@@ -565,9 +566,22 @@ def answer_edit(id):
         answer.modified_at = datetime.datetime.now()
         db.session.add(answer)
         db.session.commit()
-        return redirect(url_for('main.answer', id=answer.id))
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
     return render_template('answer_edit.html', form_answer_edit=form_answer_edit, answer=answer)
 
+############  编辑答案2  ############
+@main.route('/answer/<id>/edit2', methods=['GET', 'POST'])
+@login_required
+def answer_edit2(id):
+    answer = Answer.query.filter_by(id=id).first()
+    form_answer_edit = AddAnswerForm(prefix="form_answer_edit")
+    if form_answer_edit.validate_on_submit() and form_answer_edit.submit.data:
+        answer.content = form_answer_edit.content.data
+        answer.modified_at = datetime.datetime.now()
+        db.session.add(answer)
+        db.session.commit()
+        return redirect(url_for('main.question', id=answer.answer_question.id))
+    return render_template('answer_edit.html', form_answer_edit=form_answer_edit, answer=answer)
 
 ############  用户的回答  ############
 @main.route('/people/<id>/answers')
@@ -579,7 +593,7 @@ def people_answers(id):
     page = request.args.get('page', 1, type=int)
     pagination = user.user_answers.paginate(page, per_page=100, error_out=False)
     answers = pagination.items
-    return render_template('people_answers.html', user=user,
+    return render_template('following_answers.html', user=user,
                            endpoint='main.people_answers', pagination=pagination,
                            answers=answers)
 
@@ -611,47 +625,138 @@ def unfollow_answer(id):
     current_user.unfollow_answer(answer)
     return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
 
-############  答案点赞的用户  ############ 放到问题和答案页面
+############  用户点赞答案2  ############
+@main.route('/answer/<id>/follow2')
+@login_required
+def follow_answer2(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if answer is None:
+        flash('Invalid answer.')
+        return redirect(url_for('main.index'))
+    if current_user.is_following_answer(answer):
+        flash('你已经赞同了该答案。')
+        return redirect(url_for('main.question', id=answer.answer_question.id))
+    current_user.follow_answer(answer)
+    return redirect(url_for('main.question', id=answer.answer_question.id))
 
-############  用户点赞的答案  ############ 放到个人主页
+############  用户取赞答案2  ############
+@main.route('/answer/<id>/unfollow2')
+@login_required
+def unfollow_answer2(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if answer is None:
+        flash('Invalid answer.')
+        return redirect(url_for('main.index'))
+    if not current_user.is_following_answer(answer):
+        flash('你还没有赞同该答案。')
+        return redirect(url_for('main.question', id=answer.answer_question.id))
+    current_user.unfollow_answer(answer)
+    return redirect(url_for('main.question', id=answer.answer_question.id))
 
+############  答案点赞的用户  ############
+@main.route('/answer/<id>/followers')
+def answer_followers(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if answer is None:
+        flash('Invalid answer.')
+        return redirect(url_for('main.index'))
+    page = request.args.get('page', 1, type=int)
+    pagination = answer.users.paginate(page, per_page=100, error_out=False)
+    answer_followers = [{'user': item.a_user} for item in pagination.items]
+    return render_template('answer_followers.html', answer=answer,
+                           endpoint='main.answer_followers', pagination=pagination,
+                           answer_followers=answer_followers)
 
+############  收藏答案  ############
+@main.route('/answer/<id>/collect', methods=['GET', 'POST'])
+@login_required
+def answer_collect(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if not current_user.user_collections:
+        flash('你还没有创建收藏夹，请先创建。')
+        return redirect(url_for('main.collection_add'))
+    form = CollectForm()
+    form.collection.choices = [(collection.title, collection.title) for collection in Collection.query.filter_by(author_id=current_user.id).all()]
+    if form.validate_on_submit():
+        collection = Collection.query.filter_by(title=form.collection.data).first()
+        if answer.answer_is_following_collection(collection):
+            flash('该收藏夹已经收藏了此答案')
+        answer.answer_follow_collection(collection)
+        db.session.add(answer)
+        db.session.commit()
+        return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    return render_template('answer_collect.html', form=form, answer=answer)
+
+############  收藏答案2  ############
+@main.route('/answer/<id>/collect2', methods=['GET', 'POST'])
+@login_required
+def answer_collect2(id):
+    answer = Answer.query.filter_by(id=id).first()
+    if not current_user.user_collections:
+        flash('你还没有创建收藏夹，请先创建。')
+        return redirect(url_for('main.collection_add'))
+    form = CollectForm()
+    form.collection.choices = [(collection.title, collection.title) for collection in Collection.query.filter_by(author_id=current_user.id).all()]
+    if form.validate_on_submit():
+        collection = Collection.query.filter_by(title=form.collection.data).first()
+        if answer.answer_is_following_collection(collection):
+            flash('该收藏夹已经收藏了此答案')
+        answer.answer_follow_collection(collection)
+        db.session.add(answer)
+        db.session.commit()
+        return redirect(url_for('main.question', id=answer.answer_question.id))
+    return render_template('answer_collect.html', form=form, answer=asnwer)
 
 
 ###################################   收藏视图  ###################################
 
-############  收藏页面  ############关注功能不实现了
+############  收藏夹页面  ############
+@main.route('/collection/<id>', methods=['GET', 'POST'])
+@login_required
+def collection(id):
+    collection = Collection.query.filter_by(id=id).first()
+    answers = collection.answers.all()
+    return render_template('collection.html', collection=collection, answers=answers)
 
-############  创建收藏  ############
-
-############  收藏答案  ############表单 答案关注收藏
+############  创建收藏夹  ############
+@main.route('/collection/add', methods=['GET', 'POST'])
+@login_required
+def collection_add():
+    form = AddCollectionForm()
+    if form.validate_on_submit():
+        collection = Collection(title=form.title.data, desc=form.desc.data)
+        if Collection.query.filter_by(title=form.title.data).first():
+            flash('该收藏已创建。')
+        else:
+            author = User.query.filter_by(id=current_user.id).first()
+            collection.collection_author = author
+            db.session.add(collection)
+            db.session.commit()
+            flash('成功添加收藏。')
+            return redirect(url_for('main.collection', id=collection.id))
+    return render_template('collection_add.html', form=form)
 
 ############  取消收藏  ############
-
-
-
-'''
-@main.route('/comment/<id>/vote_up')
+@main.route('/collection/<cid>/uncollect-answer/<aid>')
 @login_required
-def vote_up_comment(id):
-    comment = Comment.query.filter_by(id=id).first()
-    if comment is None:
-        flash('Invalid comment.')
-        return redirect(url_for('main.index'))
-    vote = comment.vote_up
-    vote = vote + 1
-    comment.vote_up = vote
-    return redirect(url_for('main.question', id=comment.comment_question.id))
+def uncollect_answer(cid, aid):
+    collection = Collection.query.filter_by(id=cid).first()
+    answer = Answer.query.filter_by(id=aid).first()
+    answer.answer_unfollow_collection(collection)
+    return redirect(url_for('main.collection', id=collection.id))
 
-@main.route('/comment/<id>/vote_down')
+############  用户的所有收藏夹  ############
+@main.route('/people/<id>/collections')
 @login_required
-def vote_down_comment(id):
-    comment = Comment.query.filter_by(id=id).first()
-    if comment is None:
-        flash('Invalid comment.')
-        return redirect(url_for('main.index'))
-    vote = comment.vote_up
-    vote = vote - 1
-    comment.vote_up = vote
-    return redirect(url_for('main.question', id=comment.comment_question.id))
-'''
+def collections(id):
+    user = User.query.filter_by(id=id).first()
+    collections = Collection.query.order_by(Collection.created_at.asc()).all()
+    return render_template('collections.html', collections=collections, user=user)
+
+
+###################################   私信视图  ###################################
+
+############  查看私信  ############
+
+############  发送私信  ############
+

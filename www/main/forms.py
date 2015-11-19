@@ -6,11 +6,10 @@ __author__ = 'hipponensis'
 from flask.ext.wtf import Form
 from flask.ext.wtf.file import FileField, FileAllowed, FileRequired
 from flask.ext.pagedown.fields import PageDownField
-from wtforms import StringField, PasswordField, BooleanField, RadioField, TextAreaField, SelectField, FieldList, SubmitField, ValidationError
+from wtforms import StringField, PasswordField, BooleanField, RadioField, TextAreaField, FieldList, SubmitField, ValidationError
 from wtforms.validators import Required, Length, Email, EqualTo, AnyOf
 
 from www.models import User
-
 
 class SigninForm(Form):
     email = StringField('邮箱', validators=[Required(), Length(1, 50), Email()])
@@ -25,7 +24,7 @@ class RegistrationForm(Form):
     password2 = PasswordField('再次输入密码', validators=[Required()])
     submit = SubmitField('注册')
 
-def validate_email(self, field):
+def validate_email(field):
     if User.query.filter_by(email=field.data).first():
         raise ValidationError('此邮箱已注册')
 
@@ -66,3 +65,12 @@ class AddAnswerForm(Form):
 class CommentForm(Form):
     content = StringField('', validators=[Required()])
     submit = SubmitField('评论')
+
+class AddCollectionForm(Form):
+    title = StringField('收藏夹名称', validators=[Required(), Length(0, 50)])
+    desc = TextAreaField('收藏夹描述', validators=[Required()])
+    submit = SubmitField('发布')
+
+class CollectForm(Form):
+    collection = RadioField('选择收藏夹', choices=[])
+    submit = SubmitField('收藏')

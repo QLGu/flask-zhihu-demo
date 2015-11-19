@@ -10,9 +10,19 @@
 <div>
     <ul class="answers">
     {% for answer in answers %}
+            <div><p style="font-size:110%;">
             <a href="{{ url_for('main.answer',qid=answer.answer_question.id, aid=answer.id) }}">
                 {{ answer.answer_question.title }}
-            </a>
+            </a></p>
+            </div>
+            <div style="height:100%; width:0px;float:left;">
+            {% if not current_user.is_following_answer(answer) %}
+            <a href="{{ url_for('main.follow_answer',id=answer.id) }}" class="btn btn-default"><p>▲</p>{{ answer.users.count() }}</a>
+            {% else %}
+            <a href="{{ url_for('main.unfollow_answer', id=answer.id) }}" class="btn btn-primary"><p>▲</p>{{ answer.users.count() }}</a>
+            {% endif %}
+            <p><a href="{{ url_for('main.answer', aid=answer.id, qid=answer.answer_question.id) }}" class="btn btn-default">▼</a></p>
+            </div>
             <li class="answer">
                 <div class="answer-content">
                     <div class="answer-author">
@@ -40,7 +50,9 @@
                         ¶{{ answer.answer_comments.count() }}条评论
                         {% endif %}
                         </a>
-                        ♥感谢 ★收藏 ·没有帮助
+                        ♥感谢
+                        <a href="{{ url_for('main.answer_collect', id=answer.id) }}">★收藏</a>
+                        ·没有帮助
                     </div>
                 </div>
             </li>

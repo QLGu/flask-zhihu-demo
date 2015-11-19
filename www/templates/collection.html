@@ -1,0 +1,83 @@
+{% extends "__base__.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "__macros__.html" as macros %}
+
+{% block title %}收藏夹 - {{ collection.title }} - 知乎Demo{% endblock %}
+
+{% block page_content %}
+<div style="float:right;padding:50px;">
+    <h4>关于创建者</h4>
+    <div style="height:100%; width:0px;float:left;">
+        <a href="{{ url_for('main.user', id=collection.collection_author.id) }}">
+            <img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=collection.collection_author.image) }}" height="48" width="48">
+        </a>
+    </div>
+    <ul>
+    <li>
+        <div style="margin-left:10px;">
+        <a href="{{ url_for('main.user', id=collection.collection_author.id) }}">{{ collection.collection_author.name }}</a>
+        </div>
+    </li>
+    </ul>
+</div>
+
+<div class="page-header" style="height:100%; width:800px;">
+    <h4>{{ collection.title }}</h4>
+    <p>{{ collection.desc }}</p>
+</div>
+
+
+<div style="height:100%; width:800px;">
+<div>
+    <ul class="answers">
+    {% for answer in answers %}
+            <div><p style="font-size:110%;">
+            <a href="{{ url_for('main.answer',qid=answer.c_answer.answer_question.id, aid=answer.c_answer.id) }}">
+                {{ answer.c_answer.answer_question.title }}
+            </a></p>
+            </div>
+            <div style="height:100%; width:0px;float:left;">
+            {% if not current_user.is_following_answer(answer.c_answer) %}
+            <a href="{{ url_for('main.follow_answer',id=answer.c_answer.id) }}" class="btn btn-default"><p>▲</p>{{ answer.c_answer.users.count() }}</a>
+            {% else %}
+            <a href="{{ url_for('main.unfollow_answer', id=answer.c_answer.id) }}" class="btn btn-primary"><p>▲</p>{{ answer.c_answer.users.count() }}</a>
+            {% endif %}
+            <p><a href="{{ url_for('main.answer', aid=answer.c_answer.id, qid=answer.c_answer.answer_question.id) }}" class="btn btn-default">▼</a></p>
+            </div>
+            <li class="answer">
+                <div class="answer-content">
+                    <div class="answer-author">
+                        <a href="{{ url_for('main.user', id=answer.c_answer.answer_author.id) }}">{{ answer.c_answer.answer_author.name }}</a>
+                        {% if answer.c_answer.answer_author.one_desc!=None %}
+                        {{ answer.c_answer.answer_author.one_desc }}
+                        {% endif %}
+                    </div>
+                    <div class="answer-body" id="content">
+                        {{ answer.c_answer.content }}
+                    </div>
+                    <div class="answer-date">
+                        {% if not answer.c_answer.modified_at %}
+                        发布于 {{ moment(answer.c_answer.created_at, local=True).fromNow() }}
+                        {% else %}
+                        编辑于{{ answer.c_answer.modified_at }}
+                        {% endif %}
+                        <a href="{{ url_for('main.answer', qid=answer.c_answer.answer_question.id, aid=answer.c_answer.id) }}">
+                        {% if answer.c_answer.answer_comments.count()==0 %}
+                        ¶添加评论
+                        {% else %}
+                        ¶{{ answer.c_answer.answer_comments.count() }}条评论
+                        {% endif %}
+                        </a>
+                        ♥感谢
+                        <a href="{{ url_for('main.answer_collect', id=answer.c_answer.id) }}">★收藏</a>
+                        ·没有帮助
+                    </div>
+                </div>
+            </li>
+            <div>
+                <a href="{{ url_for('main.uncollect_answer', cid=collection.id, aid=answer.c_answer.id) }}">取消收藏</a>
+            </div>
+    {% endfor %}
+    </ul>
+</div>
+{% endblock %}

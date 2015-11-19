@@ -404,8 +404,9 @@ class Collection(db.Model):
                               lazy='dynamic',
                               cascade='all, delete-orphan')
 
-    def __init__(self, title):
+    def __init__(self, title, desc):
         self.title = title
+        self.desc = desc
 
     def __repr__(self):
         return "<Collection %r>" % self.title
@@ -427,16 +428,8 @@ class Comment(db.Model):
     def __init__(self, content):
         self.content = content
 
-    @staticmethod
-    def on_changed_content(target, value, oldvalue, initiator):
-        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i', 'strong']
-        target.content_html = bleach.linkify(bleach.clean(markdown(value, output_format='html'), tags=allowed_tags, strip=True))
-
     def __repr__(self):
         return "<Collection %r>" % self.content
-
-db.event.listen(Comment.content, 'set', Comment.on_changed_content)
-
 
 
 ###################################  私信模型  ###################################

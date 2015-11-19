@@ -1,0 +1,12 @@
+{% extends "__base__.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block title %}收藏答案 - 知乎Demo{% endblock %}
+{% block page_content %}
+<div class="page-header">
+    <h1>收藏答案</h1>
+</div>
+<div class="col-md-4">
+    {{ wtf.quick_form(form) }}
+</div>
+{% endblock %}
