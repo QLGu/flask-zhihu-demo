@@ -12,7 +12,7 @@ import datetime
 import io
 from PIL import Image, ImageOps
 
-from flask import render_template, request, redirect, url_for, abort, flash
+from flask import render_template, request, redirect, url_for, abort, flash, make_response
 from flask.ext.login import login_user, logout_user, login_required, current_user
 
 from main import main
@@ -26,10 +26,50 @@ from www.emailbinding import send_email
 
 ###################################  主页视图  ###################################
 
+############  首页动态  ############
 @main.route('/')
 def index():
-    return render_template('index.html')
+    if not current_user.is_authenticated:
+        return redirect(url_for('main.signin'))
+    show_followed = False
+    if current_user.is_authenticated:
+        show_followed = bool(request.cookies.get('show_followed', ''))
+    users = current_user.followed.all()
+    questions_all = Question.query.all()
+    answers_all = Answer.query.all()
+    tags_all = Tag.query.all()
+    quoras = questions_all + answers_all + tags_all
+    for i in range(1,len(quoras)):
+        for j in range(0,len(quoras)-i):
+            if quoras[j].followed_at and quoras[j+1].followed_at:
+                if quoras[j].followed_at < quoras[j+1].followed_at:
+                    quoras[j],quoras[j+1] = quoras[j+1],quoras[j]
+            if quoras[j].followed_at and not quoras[j+1].followed_at:
+                if quoras[j].followed_at < quoras[j+1].created_at:
+                    quoras[j],quoras[j+1] = quoras[j+1],quoras[j]
+            if quoras[j+1].followed_at and not quoras[j].followed_at:
+                if quoras[j].created_at < quoras[j+1].followed_at:
+                    quoras[j],quoras[j+1] = quoras[j+1],quoras[j]
+            if not quoras[j].followed_at and not quoras[j+1].followed_at:
+                if quoras[j].created_at < quoras[j+1].created_at:
+                    quoras[j],quoras[j+1] = quoras[j+1],quoras[j]
+    return render_template('index.html', show_followed=show_followed, quoras=quoras, users=users)
 
+############  所有动态  ############
+@main.route('/all')
+@login_required
+def show_all():
+    resp = make_response(redirect(url_for('main.index')))
+    resp.set_cookie('show_followed', '', max_age=30*24*60*60)
+    return resp
+
+############  关注动态  ############
+@main.route('/followed')
+@login_required
+def show_followed():
+    resp = make_response(redirect(url_for('main.index')))
+    resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
+    return resp
 
 ###################################  注册登陆视图  ###################################
 
@@ -82,7 +122,7 @@ def signout():
     login_required修饰器保护路由只让激活用户操作。
     '''
     logout_user()
-    return redirect(url_for('main.index'))
+    return redirect(url_for('main.signin'))
 
 ############  未激活限制  ############
 @main.route('/secret')
@@ -100,15 +140,15 @@ def register():
     '''
     form = RegistrationForm()
     if form.validate_on_submit():
-        user = User(email=form.email.data, name=form.name.data, password=form.password.data, image='img/default_avatar.jpg')
+        user = User(email=form.email.data, name=form.name.data, password=form.password.data, confirmed=1, image='img/default_avatar.jpg')
         if User.query.filter_by(email=form.email.data).first():
             flash('该邮箱已注册')
         else:
             db.session.add(user)
             db.session.commit()
-            token = user.generate_confirmation_token()
-            send_email(user.email, '激活邮箱', 'email/confirm', user=user, token=token)
-            flash('一封激活邮件已发往您的注册邮箱，请尽快前往确认。')
+            # token = user.generate_confirmation_token()
+            # send_email(user.email, '激活邮箱', 'email/confirm', user=user, token=token)
+            # flash('一封激活邮件已发往您的注册邮箱，请尽快前往确认。')
             return redirect(url_for('main.signin'))
     return render_template('register.html', form=form)
 
@@ -149,13 +189,27 @@ def user(id):
     if user is None:
         flash('Invalid user.')
         return redirect(url_for('main.index'))
-    following_questions = user.questions.all()
-    following_answers = user.answers.all()
-    following_tags = user.tags.all()
-    return render_template('people.html', user=user,
-                           following_questions=following_questions,
-                           following_answers=following_answers,
-                           following_tags=following_tags)
+    user_questions = user.user_questions.all()
+    for i in range(1,len(user_questions)):
+        for j in range(0,len(user_questions)-i):
+            if user_questions[j].created_at < user_questions[j+1].created_at:
+                user_questions[j],user_questions[j+1] = user_questions[j+1],user_questions[j]
+    user_answers = user.user_answers.all()
+    for i in range(1,len(user_answers)):
+        for j in range(0,len(user_answers)-i):
+            if user_answers[j].created_at < user_answers[j+1].created_at:
+                user_answers[j],user_answers[j+1] = user_answers[j+1],user_answers[j]
+    questions_all = Question.query.all()
+    answers_all = Answer.query.all()
+    tags_all = Tag.query.all()
+    quoras = questions_all + answers_all + tags_all
+    for i in range(1,len(quoras)):
+        for j in range(0,len(quoras)-i):
+            if quoras[j].followed_at and quoras[j+1].followed_at:
+                if quoras[j].followed_at < quoras[j+1].followed_at:
+                    quoras[j],quoras[j+1] = quoras[j+1],quoras[j]
+    return render_template('people.html', user=user, user_questions=user_questions, user_answers=user_answers,
+                           quoras=quoras)
 
 ############  编辑资料  ############
 @main.route('/people/edit', methods=['GET', 'POST'])
@@ -324,12 +378,12 @@ def topic(id):
     if topic is None:
         flash('Invalid topic.')
         return redirect(url_for('main.index'))
-    page = request.args.get('page', 1, type=int)
-    pagination = topic.questions.paginate(page, per_page=100, error_out=False)
-    questions = [{'question': item.t_question} for item in pagination.items]
-    return render_template('topic.html', topic=topic,
-                           endpoint='main.topic', pagination=pagination,
-                           questions=questions)
+    questions = topic.questions.all()
+    for i in range(1,len(questions)):
+        for j in range(0,len(questions)-i):
+            if questions[j].t_question.created_at < questions[j+1].t_question.created_at:
+                questions[j],questions[j+1] = questions[j+1],questions[j]
+    return render_template('topic.html', topic=topic, questions=questions)
 
 ############  关注话题  ############
 @main.route('/topic/<id>/follow')
@@ -342,6 +396,9 @@ def follow_tag(id):
     if current_user.is_following_tag(topic):
         flash('你已经关注了该话题。')
         return redirect(url_for('main.topic', id=id))
+    topic.followed_at = datetime.datetime.now()
+    db.session.add(topic)
+    db.session.commit()
     current_user.follow_tag(topic)
     flash('你关注了话题： %s。' % topic.title)
     return redirect(url_for('main.topic', id=id))
@@ -357,6 +414,9 @@ def unfollow_tag(id):
     if not current_user.is_following_tag(topic):
         flash('你还没有关注该话题。')
         return redirect(url_for('main.topic', id=id))
+    topic.followed_at = ''
+    db.session.add(topic)
+    db.session.commit()
     current_user.unfollow_tag(topic)
     flash('你取消了对话题： %s 的关注。' % topic.title)
     return redirect(url_for('main.topic', id=id))
@@ -423,7 +483,11 @@ def question(id):
         db.session.commit()
         flash('回答成功')
         return redirect(url_for('main.question', id=question.id))
-    answers = question.question_answers
+    answers = question.question_answers.all()
+    for i in range(1,len(answers)):
+        for j in range(0,len(answers)-i):
+            if answers[j].users.count() < answers[j+1].users.count():
+                answers[j],answers[j+1] = answers[j+1],answers[j]
     return render_template('question.html', question=question, tags=tags, created_time=created_time,
                                form_question_comment=form_question_comment, question_comments=question_comments,
                                form_add_answer=form_add_answer, answers=answers)
@@ -447,11 +511,48 @@ def question_add():
             question.question_author = author
             db.session.commit()
             for topic in topics:
-                tag = Tag.query.filter_by(title=topic).first()
-                question.question_follow_tag(tag)
+                if not Tag.query.filter_by(title=topic).first():
+                    topic = Tag(title=topic, desc='话题描述')
+                    db.session.add(topic)
+                    db.session.commit()
+                    question.question_follow_tag(topic)
+                else:
+                    tag = Tag.query.filter_by(title=topic).first()
+                    question.question_follow_tag(tag)
             flash('成功添加问题。')
             return redirect(url_for('main.question', id=question.id))
     return render_template('question_add.html', form=form)
+
+############  修改问题  ############
+@main.route('/question/<id>/edit', methods=['GET', 'POST'])
+@login_required
+def question_edit(id):
+    question = Question.query.filter_by(id=id).first()
+    form = AddQuestionForm()
+    if form.validate_on_submit():
+        question.title = form.title.data
+        question.content = form.content.data
+        tags = form.tags.data
+        topics = tags.split(',')
+        if len(topics) > 4:
+            flash('最多只能关注5个话题。')
+            topics = topics[:5]
+        db.session.commit()
+        for topic in topics:
+            tag = Tag.query.filter_by(title=topic).first()
+            question.question_follow_tag(tag)
+        flash('成功添加问题。')
+        return redirect(url_for('main.question', id=question.id))
+    form.title.data = question.title
+    form.content.data = question.content
+    topics = ''
+    for question in question.tags.all():
+        if not topics:
+            topics= topics +question.q_tag.title
+        else:
+            topics= topics + ',' +question.q_tag.title
+    form.tags.data = topics
+    return render_template('question_edit.html', form=form)
 
 ###########  用户的提问  ###########
 @main.route('/people/<id>/questions')
@@ -463,6 +564,10 @@ def people_questions(id):
     page = request.args.get('page', 1, type=int)
     pagination = user.user_questions.paginate(page, per_page=100, error_out=False)
     questions = pagination.items
+    for i in range(1,len(questions)):
+        for j in range(0,len(questions)-i):
+            if questions[j].created_at < questions[j+1].created_at:
+                questions[j],questions[j+1] = questions[j+1],questions[j]
     return render_template('following_questions.html', user=user,
                            endpoint='main.people_questions', pagination=pagination,
                            questions=questions)
@@ -478,6 +583,9 @@ def follow_question(id):
     if current_user.is_following_question(question):
         flash('你已经关注了该问题。')
         return redirect(url_for('main.question', id=id))
+    question.followed_at = datetime.datetime.now()
+    db.session.add(question)
+    db.session.commit()
     current_user.follow_question(question)
     flash('你关注了问题： %s。' % question.title)
     return redirect(url_for('main.question', id=id))
@@ -493,6 +601,9 @@ def unfollow_question(id):
     if not current_user.is_following_question(question):
         flash('你还没有关注该问题。')
         return redirect(url_for('main.question', id=id))
+    question.followed_at = ''
+    db.session.add(question)
+    db.session.commit()
     current_user.unfollow_question(question)
     flash('你取消了对问题： %s 的关注。' % question.title)
     return redirect(url_for('main.question', id=id))
@@ -567,6 +678,7 @@ def answer_edit(id):
         db.session.add(answer)
         db.session.commit()
         return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    form_answer_edit.content.data = answer.content
     return render_template('answer_edit.html', form_answer_edit=form_answer_edit, answer=answer)
 
 ############  编辑答案2  ############
@@ -581,6 +693,7 @@ def answer_edit2(id):
         db.session.add(answer)
         db.session.commit()
         return redirect(url_for('main.question', id=answer.answer_question.id))
+    form_answer_edit.content.data = answer.content
     return render_template('answer_edit.html', form_answer_edit=form_answer_edit, answer=answer)
 
 ############  用户的回答  ############
@@ -593,6 +706,10 @@ def people_answers(id):
     page = request.args.get('page', 1, type=int)
     pagination = user.user_answers.paginate(page, per_page=100, error_out=False)
     answers = pagination.items
+    for i in range(1,len(answers)):
+        for j in range(0,len(answers)-i):
+            if answers[j].created_at < answers[j+1].created_at:
+                answers[j],answers[j+1] = answers[j+1],answers[j]
     return render_template('following_answers.html', user=user,
                            endpoint='main.people_answers', pagination=pagination,
                            answers=answers)
@@ -608,6 +725,9 @@ def follow_answer(id):
     if current_user.is_following_answer(answer):
         flash('你已经赞同了该答案。')
         return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    answer.followed_at = datetime.datetime.now()
+    db.session.add(answer)
+    db.session.commit()
     current_user.follow_answer(answer)
     return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
 
@@ -622,6 +742,9 @@ def unfollow_answer(id):
     if not current_user.is_following_answer(answer):
         flash('你还没有赞同该答案。')
         return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
+    answer.followed_at = ''
+    db.session.add(answer)
+    db.session.commit()
     current_user.unfollow_answer(answer)
     return redirect(url_for('main.answer', qid=answer.answer_question.id, aid=answer.id))
 
@@ -636,6 +759,9 @@ def follow_answer2(id):
     if current_user.is_following_answer(answer):
         flash('你已经赞同了该答案。')
         return redirect(url_for('main.question', id=answer.answer_question.id))
+    answer.followed_at = datetime.datetime.now()
+    db.session.add(answer)
+    db.session.commit()
     current_user.follow_answer(answer)
     return redirect(url_for('main.question', id=answer.answer_question.id))
 
@@ -650,6 +776,9 @@ def unfollow_answer2(id):
     if not current_user.is_following_answer(answer):
         flash('你还没有赞同该答案。')
         return redirect(url_for('main.question', id=answer.answer_question.id))
+    answer.followed_at = ''
+    db.session.add(answer)
+    db.session.commit()
     current_user.unfollow_answer(answer)
     return redirect(url_for('main.question', id=answer.answer_question.id))
 
@@ -753,10 +882,4 @@ def collections(id):
     collections = Collection.query.order_by(Collection.created_at.asc()).all()
     return render_template('collections.html', collections=collections, user=user)
 
-
-###################################   私信视图  ###################################
-
-############  查看私信  ############
-
-############  发送私信  ############
 

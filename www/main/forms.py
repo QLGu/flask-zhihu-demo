@@ -54,7 +54,7 @@ class AddTagForm(Form):
 
 class AddQuestionForm(Form):
     title = StringField('写下你的问题', validators=[Required(), Length(0, 50)])
-    content = TextAreaField('问题说明（可选）：')
+    content = PageDownField('问题说明（可选）：')
     tags = StringField('选择话题(多个标签可用,隔开，最多关联5个话题)', validators=[Required(), Length(0, 50)])
     submit = SubmitField('发布')
 

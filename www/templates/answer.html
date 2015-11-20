@@ -2,7 +2,7 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% import "__macros__.html" as macros %}
 
-{% block title %}{{ answer.title }} - {{ question.question_author.name }}的回答 - 知乎Demo{% endblock %}
+{% block title %}{{ answer.answer_author.name }}的回答 - {{ question.title }} - 知乎Demo{% endblock %}
 
 {% block head %}
 {{ super() }}
@@ -43,7 +43,13 @@ $(this).hide();$('.btn3').show();
         {% endfor %}
     </p>
     <h3>{{ question.title }}</h3>
-    <p>{{ question.content }}</p>
+    <p>
+        {% if question.content_html %}
+        {{ question.content_html | safe }}
+        {% else %}
+        {{ question.content }}
+        {% endif %}
+        <a href="{{ url_for('main.question_edit', id=question.id) }}">修改</a></p>
     <p>
         {{ created_time }}
         <mark class="btn1">
@@ -110,7 +116,11 @@ $(this).hide();$('.btn3').show();
                 ……<a href="{{ url_for('main.answer_followers', id=answer.id) }}">等人赞同了该答案</a>
             </div>
             <div class="answer-body">
+                {% if answer.content_html %}
+                {{ answer.content_html | safe }}
+                {% else %}
                 {{ answer.content }}
+                {% endif %}
                 {% if current_user == answer.answer_author %}
                 <a href="{{ url_for('main.answer_edit', id=answer.id) }}">✄修改</a>
                 {% endif %}
@@ -143,4 +153,9 @@ $(this).hide();$('.btn3').show();
     </li>
 </ul>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
 {% endblock %}

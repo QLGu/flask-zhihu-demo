@@ -30,7 +30,14 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
         {% endfor %}
     </p>
     <h3>{{ question.title }}</h3>
-    <p>{{ question.content }}</p>
+    <p>
+        {% if question.content_html %}
+        {{ question.content_html | safe }}
+        {% else %}
+        {{ question.content }}
+        {% endif %}
+        <a href="{{ url_for('main.question_edit', id=question.id) }}">修改</a>
+    </p>
     <p>
         {{ created_time }}
         <mark class="btn1">
@@ -95,7 +102,11 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
                 ……<a href="{{ url_for('main.answer_followers', id=answer.id) }}">等人赞同了该答案</a>
             </div>
             <div class="answer-body">
+                {% if answer.content_html %}
+                {{ answer.content_html | safe }}
+                {% else %}
                 {{ answer.content }}
+                {% endif %}
                 {% if current_user == answer.answer_author %}
                 <a href="{{ url_for('main.answer_edit2', id=answer.id) }}">✄修改</a>
                 {% endif %}
@@ -124,7 +135,7 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
 </div>
 <div>
     {% for question_answer in question.question_answers %}
-    {% if question_answer.answer_author %}
+    {% if question_answer.answer_author==current_user %}
     <h3>你已回答过此问题。</h3>
     {% else %}
     {{ wtf.quick_form(form_add_answer) }}

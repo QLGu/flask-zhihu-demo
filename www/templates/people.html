@@ -101,7 +101,7 @@
 
 <table class="table table-hover followers">
     <thead style="font-size:110%;"><tr><th>回答<a href="{{ url_for('main.people_answers', id=user.id) }}"><span class="badge">{{ user.user_answers.count() }}</span></a></th></tr></thead>
-    {% for answer in user.user_answers %}
+    {% for answer in user_answers %}
     {% if loop.index <=3 %}
     <tr>
         <td>
@@ -122,7 +122,7 @@
 
 <table class="table table-hover followers">
     <thead style="font-size:110%;"><tr><th>提问<a href="{{ url_for('main.people_questions', id=user.id) }}"><span class="badge">{{ user.user_questions.count() }}</span></a></th></tr></thead>
-    {% for question in user.user_questions %}
+    {% for question in user_questions %}
     {% if loop.index <=3 %}
         <tr>
             <td>
@@ -135,75 +135,100 @@
 
 <table class="table table-hover followers">
     <thead style="font-size:110%"><tr><th>最新动态</th></tr></thead>
-    {% for following_question in following_questions %}
-    <tr>
-        <td>
-            <p>关注了问题</p>
-            <a href="{{ url_for('main.question', id=following_question.u_question.id) }}">
-                {{ following_question.u_question.title }}
-            </a>
-        </td>
-    </tr>
-    {% endfor %}
-    {% for following_answer in following_answers %}
-    <tr>
-        <td>
-            <p>赞同了回答</p>
-            <div><p style="font-size:110%;">
-            <a href="{{ url_for('main.answer',qid=following_answer.u_answer.answer_question.id, aid=following_answer.u_answer.id) }}">
-                {{ following_answer.u_answer.answer_question.title }}
-            </a></p>
-            </div>
-            <div style="height:100%; width:0px;float:left;">
-            <p class="btn btn-default">{{ following_answer.u_answer.users.count() }}</p>
-            </div>
-            <li class="answer">
-                <div class="answer-content">
-                    <div class="answer-author">
-                        <a href="{{ url_for('main.user', id=following_answer.u_answer.answer_author.id) }}">{{ following_answer.u_answer.answer_author.name }}</a>
-                        {% if following_answer.u_answer.answer_author.one_desc!=None %}
-                        {{ following_answer.u_answer.answer_author.one_desc }}
-                        {% endif %}
-                    </div>
-                    <div class="answer-body" id="content">
-                        {{ following_answer.u_answer.content|truncate(110, True) }}
-                        {% if current_user == following_answer.u_answer.answer_author %}
-                        <a href="{{ url_for('main.answer_edit', id=following_answer.u_answer.id) }}">✄修改</a>
-                        {% endif %}
-                    </div>
-                    <div class="answer-date">
-                        {% if not following_answer.u_answer.modified_at %}
-                        发布于 {{ moment(following_answer.u_answer.created_at, local=True).fromNow() }}
-                        {% else %}
-                        编辑于{{ following_answer.u_answer.modified_at }}
-                        {% endif %}
-                        <a href="{{ url_for('main.answer', qid=following_answer.u_answer.answer_question.id, aid=following_answer.u_answer.id) }}">
-                        {% if following_answer.u_answer.answer_comments.count()==0 %}
-                        ¶添加评论
-                        {% else %}
-                        ¶{{ following_answer.u_answer.answer_comments.count() }}条评论
-                        {% endif %}
-                        </a>
-                        ♥感谢
-                        <a href="{{ url_for('main.answer_collect', id=following_answer.u_answer.id) }}">★收藏</a>
-                        ·没有帮助
-                    </div>
-                </div>
-            </li>
-        </td>
-    </tr>
-    {% endfor %}
-    {% for following_tag in following_tags %}
-    <tr>
-        <td>
-            关注了话题
-            <a href="{{ url_for('main.topic', id=following_tag.tag_set.id) }}">
-                <img class="img-rounded" src="{{ url_for('static', filename=following_tag.tag_set.image) }}" width="20" height="20">
-                {{ following_tag.tag_set.title }}
-            </a>
-        </td>
-    </tr>
-    {% endfor %}
+    {% for quora in quoras %}
+
+        {% if quora.desc %}
+                {% for tag_follower in quora.users %}
+                    {% if tag_follower.user_set == user %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('main.user', id=tag_follower.user_set.id) }}">
+                            <p style="float:left;"><img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=tag_follower.user_set.image) }}" height="45" width="45"></p></a>
+                            <p style="float:right;">{{ moment(quora.followed_at, local=True).fromNow() }}</p>
+                            <div class="answer-content">
+                                <p>
+                                    <a href="{{ url_for('main.user', id=tag_follower.user_set.id) }}">{{ tag_follower.user_set.name }}</a>关注了话题
+                                    <a href="{{ url_for('main.topic', id=quora.id) }}">
+                                        <img class="img-rounded" src="{{ url_for('static', filename=quora.image) }}" height="25" width="25">
+                                        {{ quora.title }}
+                                    </a>
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+            {% endfor %}
+
+        {% elif quora.title and quora.content %}
+                {% for question_follower in quora.users %}
+                    {% if question_follower.q_user == user %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('main.user', id=question_follower.q_user.id) }}">
+                            <p style="float:left;"><img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=question_follower.q_user.image) }}" height="45" width="45"></p></a>
+                            <p style="float:right;">{{ moment(quora.followed_at, local=True).fromNow() }}</p>
+                            <div class="answer-content">
+                                <p><a href="{{ url_for('main.user', id=question_follower.q_user.id) }}">{{ question_follower.q_user.name }}</a>关注了该问题</p>
+                                <p style="font-size:110%;"><a href="{{ url_for('main.question', id=quora.id) }}">{{ quora.title }}</a></p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+            {% endfor %}
+
+        {% else %}
+                {% for answer_follower in quora.users %}
+                    {% if answer_follower.a_user == user %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('main.user', id=answer_follower.a_user.id) }}">
+                            <p style="float:left;"><img class="img-rounded profile-thumbnail" src="{{ url_for('static', filename=answer_follower.a_user.image) }}" height="45" width="45"></p></a>
+                            <p style="float:right;">{{ moment(quora.followed_at, local=True).fromNow() }}</p>
+                            <div style="height:100%; width:0px;float:left;margin-top: 60px;">
+                                <p class="btn btn-default">{{ quora.users.count() }}</p>
+                            </div>
+                            <div class="answer-content">
+                                <p><a href="{{ url_for('main.user', id=answer_follower.a_user.id) }}">{{ answer_follower.a_user.name }}</a>赞同该答案</p>
+                                <p style="font-size:110%;"><a href="{{ url_for('main.question', id=quora.answer_question.id) }}">{{ quora.answer_question.title }}</a></p>
+                                <div>
+                                    <div class="answer-author">
+                                        <a href="{{ url_for('main.user', id=quora.answer_author.id) }}">{{ quora.answer_author.name }}</a>
+                                        {% if quora.answer_author.one_desc!=None %}
+                                        {{ quora.answer_author.one_desc }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="answer-body">
+                                        {{ quora.content|truncate(110, True) }}
+                                        {% if current_user == quora.answer_author %}
+                                        <a href="{{ url_for('main.answer_edit', id=quora.id) }}">✄修改</a>
+                                        {% endif %}
+                                    </div>
+                                    <div class="answer-date">
+                                        {% if not quora.modified_at %}
+                                        发布于 {{ moment(quora.created_at, local=True).fromNow() }}
+                                        {% else %}
+                                        编辑于{{ quora.modified_at }}
+                                        {% endif %}
+                                        <a href="{{ url_for('main.answer', qid=quora.answer_question.id, aid=quora.id) }}">
+                                            {% if quora.answer_comments.count()==0 %}
+                                            ¶添加评论
+                                            {% else %}
+                                            ¶{{ quora.answer_comments.count() }}条评论
+                                            {% endif %}
+                                        </a>
+                                        ♥感谢
+                                        <a href="{{ url_for('main.answer_collect', id=quora.id) }}">★收藏</a>
+                                        ·没有帮助
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+            {% endfor %}
+
+        {% endif %}
+        {% endfor %}
 </table>
 </div>
 {% endblock %}

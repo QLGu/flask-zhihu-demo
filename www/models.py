@@ -4,13 +4,14 @@
 __author__ = 'hipponensis'
 
 from datetime import datetime
-from markdown import markdown
-import bleach
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
 from flask.ext.login import UserMixin
+
+from markdown import markdown
+import bleach
 
 from www import db, login_manager
 
@@ -124,11 +125,12 @@ class User(UserMixin, db.Model):
                                   lazy='dynamic',
                                   cascade='all, delete-orphan')
 
-    def __init__(self, email, name, password,image):
+    def __init__(self, email, name, password, image , confirmed):
         self.email = email
         self.name = name
         self.password = password
         self.image = image
+        self.confirmed = confirmed
 
     @property
     def password(self):
@@ -250,8 +252,10 @@ class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(50), nullable=False)
     content = db.Column(db.Text)
+    content_html = db.Column(db.Text)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     modified_at = db.Column(db.DateTime)
+    followed_at = db.Column(db.DateTime)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_answers = db.relationship('Answer', backref='answer_question', lazy='dynamic')
     question_comments = db.relationship('Comment', backref='comment_question', lazy='dynamic')
@@ -291,8 +295,19 @@ class Question(db.Model):
     def question_is_following_tag(self, tag):
         return self.tags.filter_by(tags_id=tag.id).first() is not None
 
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+                        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul',
+                        'h1', 'h2', 'h3', 'p']
+        target.content_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+
     def __repr__(self):
         return "<Question %r>" % self.title
+
+db.event.listen(Question.content, 'set', Question.on_changed_body)
 
 
 ###################################  回答模型  ###################################
@@ -301,12 +316,14 @@ class Answer(db.Model):
     __tablename__ = 'answers'
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
+    content_html = db.Column(db.Text)
     thanks = db.Column(db.Integer, default=0)
     no_help = db.Column(db.Integer, default=0)
     vote_up = db.Column(db.Integer, default=0)
     vote_down = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
     modified_at = db.Column(db.DateTime)
+    followed_at = db.Column(db.DateTime)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     question_id = db.Column(db.Integer, db.ForeignKey('questions.id'))
     answer_comments = db.relationship('Comment', backref='comment_answer', lazy='dynamic')
@@ -344,8 +361,19 @@ class Answer(db.Model):
     def answer_is_following_collection(self, collection):
         return self.collections.filter_by(collections_id=collection.id).first() is not None
 
+    @staticmethod
+    def on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
+                        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul',
+                        'h1', 'h2', 'h3', 'p']
+        target.content_html = bleach.linkify(bleach.clean(
+            markdown(value, output_format='html'),
+            tags=allowed_tags, strip=True))
+
     def __repr__(self):
         return "<Answer %r>" % self.content
+
+db.event.listen(Answer.content, 'set', Answer.on_changed_body)
 
 
 ####################################   话题模型  ###################################
@@ -357,6 +385,7 @@ class Tag(db.Model):
     desc = db.Column(db.Text, nullable=False)
     image = db.Column(db.String(50), nullable=False, default='img/default_topic.jpg')
     created_at = db.Column(db.DateTime, index=True, nullable=False, default=datetime.now)
+    followed_at = db.Column(db.DateTime)
     users = db.relationship('Tagsusers',
                             foreign_keys=[Tagsusers.tags_id],
                             backref=db.backref('tag_set', lazy='joined'),

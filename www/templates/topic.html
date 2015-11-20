@@ -1,5 +1,4 @@
 {% extends "__base__.html" %}
-{% import "__macros__.html" as macros %}
 
 {% block title %}{{ topic.title }} - 知乎Demo{% endblock %}
 
@@ -18,19 +17,58 @@
     </p>
 </div>
 <table class="table table-hover followers">
-    <thead><tr><th>Question</th></tr></thead>
+    <thead><tr><th></th></tr></thead>
     {% for question in questions %}
     <tr>
         <td>
-            <a href="{{ url_for('main.question', id=question.question.id) }}">
-                {{ question.question.title }}
-            </a>
+            <div><p style="font-size:110%;">
+            <a href="{{ url_for('main.question', id=question.t_question.id) }}" style="font-size:110%;">
+                {{ question.t_question.title }}
+            </a></p>
+            </div>
+            {% for answer in question.t_question.question_answers %}
+            {% if loop.index <=2 %}
+            <div style="height:100%; width:0px;float:left;">
+            <p class="btn btn-default">{{ answer.users.count() }}</p>
+            </div>
+            <li class="answer">
+                <div class="answer-content">
+                    <div class="answer-author">
+                        <a href="{{ url_for('main.user', id=answer.answer_author.id) }}">{{ answer.answer_author.name }}</a>
+                        {% if answer.answer_author.one_desc!=None %}
+                        {{ answer.answer_author.one_desc }}
+                        {% endif %}
+                    </div>
+                    <div class="answer-body" id="content">
+                        {{ answer.content|truncate(110, True) }}
+                        {% if current_user == answer.answer_author %}
+                        <a href="{{ url_for('main.answer_edit', id=answer.id) }}">✄修改</a>
+                        {% endif %}
+                    </div>
+                    <div class="answer-date">
+                        {% if not answer.modified_at %}
+                        发布于 {{ moment(answer.created_at, local=True).fromNow() }}
+                        {% else %}
+                        编辑于{{ answer.modified_at }}
+                        {% endif %}
+                        <a href="{{ url_for('main.answer', qid=answer.answer_question.id, aid=answer.id) }}">
+                        {% if answer.answer_comments.count()==0 %}
+                        ¶添加评论
+                        {% else %}
+                        ¶{{ answer.answer_comments.count() }}条评论
+                        {% endif %}
+                        </a>
+                        ♥感谢
+                        <a href="{{ url_for('main.answer_collect', id=answer.id) }}">★收藏</a>
+                        ·没有帮助
+                    </div>
+                </div>
+            </li>
+            {% endif %}
+            {% endfor %}
         </td>
     </tr>
     {% endfor %}
 </table>
-<div class="pagination">
-    {{ macros.pagination_widget(pagination, endpoint, id = topic.id) }}
-</div>
 
 {% endblock %}

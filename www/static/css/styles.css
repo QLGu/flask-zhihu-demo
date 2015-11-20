@@ -38,6 +38,7 @@ div.answer-thumbnail {
     position: absolute;
 }
 div.answer-content {
+    margin-top: 5px;
     margin-left: 48px;
     min-height: 48px;
 }
