@@ -1,5 +1,4 @@
 # flask-zhihu-demo
-simple zhihu by learning flask
 ==========
 
 
