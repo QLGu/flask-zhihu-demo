@@ -55,7 +55,6 @@ $(this).hide();$('.btn1').show();//然后爹地又出来了,妈咪又回去了
             {{ wtf.quick_form(form_question_comment) }}
         </div>
     </div>
-    <p>{{ question.question_author.name }}</p>
     <p>
         {% if not current_user.is_following_question(question) %}
         <a href="{{ url_for('main.follow_question',id=question.id) }}" class="btn btn-primary">关注</a>

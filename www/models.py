@@ -18,7 +18,6 @@ from www import db, login_manager
 
 ###################################  关联模型  ###################################
 
-#########  关注关联表模型  #########
 class Follow(db.Model):
     __tablename__ = 'follows'
     follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
@@ -295,6 +294,7 @@ class Question(db.Model):
     def question_is_following_tag(self, tag):
         return self.tags.filter_by(tags_id=tag.id).first() is not None
 
+    ############  markdown  ############
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
         allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',
@@ -361,6 +361,7 @@ class Answer(db.Model):
     def answer_is_following_collection(self, collection):
         return self.collections.filter_by(collections_id=collection.id).first() is not None
 
+    ############  markdown  ############
     @staticmethod
     def on_changed_body(target, value, oldvalue, initiator):
         allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code',

@@ -91,14 +91,13 @@
     </div>
 </div>
 
-<div>
-    <a href="{{ url_for('main.people_questions', id=user.id) }}"><h4>提问<span class="badge">{{ user.user_questions.count() }}</span></h4></a>
-    <a href="{{ url_for('main.people_answers', id=user.id) }}"><h4>回答<span class="badge">{{ user.user_answers.count() }}</span></h4></a>
-    <a href="{{ url_for('main.collections', id=user.id) }}"><h4>收藏<span class="badge">{{ user.user_collections.count() }}</span></h4></a>
+<div style="height:100%; width:800px;">
+    <a href="{{ url_for('main.people_questions', id=user.id) }}" class="btn btn-default"">提问<span class="badge">{{ user.user_questions.count() }}</span></a>
+    <a href="{{ url_for('main.people_answers', id=user.id) }}" class="btn btn-default">回答<span class="badge">{{ user.user_answers.count() }}</span></a>
+    <a href="{{ url_for('main.collections', id=user.id) }}" class="btn btn-default">收藏<span class="badge">{{ user.user_collections.count() }}</span></a>
 </div>
 
 <div style="height:100%; width:800px;">
-
 <table class="table table-hover followers">
     <thead style="font-size:110%;"><tr><th>回答<a href="{{ url_for('main.people_answers', id=user.id) }}"><span class="badge">{{ user.user_answers.count() }}</span></a></th></tr></thead>
     {% for answer in user_answers %}

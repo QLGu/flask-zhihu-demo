@@ -23,7 +23,6 @@ from www.models import User, Question, Answer, Tag, Collection, Comment, Message
 from www.emailbinding import send_email
 
 
-
 ###################################  主页视图  ###################################
 
 ############  首页动态  ############
