@@ -1,6 +1,4 @@
 # flask-zhihu-demo
-==========
-
 
 ##简介
 
